@@ -1,0 +1,227 @@
+\chapter{What this course is about}
+
+This is a graduate level course in linguistics that introduces statistical data analysis to people who have presumably never done any data analysis before. Only high school pre-calculus mathematics is presupposed, and even there not much is needed beyond basic math skills like addition, subtraction, multiplication, and division.
+
+The goal of this course is to prepare students to understand and use the most commonly deployed statistical models in psycholinguistics. The course is designed to bring people to terms with the linear mixed model framework. We ignore ANOVA in this course because there is not enough time to cover it. We also limit the discussion to two commonly used distributions: the binomial and normal distributions.
+
+The most frequent question people tend to have in this class is: \textbf{why do I need to study all this stuff}? The short answer is that linguistics is now a heavily experimental science, and one cannot function in linguistics any more without at least a basic knowledge of statistics. 
+Because time is short in this course, I decided to drastically limit the scope of the course, so that we cover only a small number of topics; these will be the most frequently used tools in linguistics.
+
+By the end of the course you should know the following:
+
+\begin{itemize}
+\item \textbf{Basic} usage of the R language for data analysis.
+\item Basic understanding of the logic of significance testing and hypothesis testing.
+\item The meaning of confidence intervals, p-values, z- and t-values, Type I and II error probability, Power. 
+\item Linear models (including simple multiple regression), basic contrast coding.
+%\item Basics of analysis of variance, including repeated measures anova.
+\item Basics of fitting linear mixed models and presenting results.
+\end{itemize}
+
+\section{Quiz: Do you need this course?}
+
+You should take this quiz on your own to decide whether you need this course. If you can answer (almost) all the questions correctly, you are in pretty good shape. If you made more than one mistake or don't know the answer to more than one question, you should probably do this course. The solutions are at the end of the book.
+
+\textbf{Instructions}: choose only one answer by circling the relevant letter. If you don't know the answer, just leave the answer blank. 
+
+\begin{enumerate}
+\item Standard error is
+
+\begin{enumerate}
+\item[a] the standard deviation of the sample scores
+\item[b] the standard deviation of the distribution of sample means
+\item[c] the square root of the sample variance
+\item[d] 2 times the standard deviation of sample scores
+\end{enumerate}
+
+\item
+If we sum up the differences of each sample score from the sample's mean (average) we will always get
+
+\begin{enumerate}
+\item[a] a large number
+\item[b] the number zero
+\item[c] a different number each time, sometimes large, sometimes small
+\item[d] the number one
+\end{enumerate}
+
+\item As sample size increases, the standard error of the sample should
+
+\begin{enumerate}
+\item[a]
+increase
+\item[b]
+decrease
+\item[c]
+remain unchanged
+\end{enumerate}
+
+\item
+The 95\% confidence interval tells you
+
+\begin{enumerate}
+\item[a]
+that the probability is 95\% that the population mean is equal to the sample mean
+\item[b]
+that the sample mean lies within this interval with probability 95\%
+\item[c]
+that the population mean lies within this interval with probability 95\%
+\item[d] 
+none of the above
+\end{enumerate}
+
+\item
+The 95\% confidence interval is roughly equal to 
+
+\begin{enumerate}
+\item[a]
+ 0.5 times the standard error
+\item[b]
+ 1 times the standard error
+\item[c]
+1.5 times the standard error
+\item[d]
+2 times the standard error
+\end{enumerate}
+
+\item
+The 95\% confidence interval is --- the 90\% confidence interval
+
+\begin{enumerate}
+\item[a]
+wider than
+\item[b]
+narrower than
+\item[c]
+same as
+\end{enumerate}
+
+\item
+A p-value is
+
+\begin{enumerate}
+\item[a]
+the probability of the null hypothesis being true
+\item[b]
+the probability of the null hypothesis being false
+\item[c]
+the probability of the alternative hypothesis being true
+\item[d]
+the probability of getting the sample mean that you got (or a value more extreme) assuming the null hypothesis is true
+\item[e]
+the probability of getting the sample mean that you got (or a value less extreme) assuming the null hypothesis is true
+\end{enumerate}
+
+\item
+If Type I error probability, alpha, is 0.05 in a t-test, then
+
+\begin{enumerate}
+\item[a]
+we have a 5\% probability of rejecting the null hypothesis when it is actually true
+\item[b]
+we have a 95\% probability of rejecting the null hypothesis when it is actually true
+\item[c]
+we necessarily have low power
+\item[d]
+we necessarily have high power
+\end{enumerate}
+
+\item
+Type II error probability is
+
+\begin{enumerate}
+\item[a]
+the probability of accepting the null when it's true
+\item[b]
+the probability of accepting the null when it's false
+\item[c]
+the probability of rejecting the null when it's true
+\item[d]
+the probability of rejecting the null when it's false
+\end{enumerate}
+
+\item
+When power increases
+\begin{enumerate}
+\item[a]
+Type II error probability decreases
+\item[b]
+Type II error probability increases
+\item[c]
+Type II error probability remains unchanged
+\end{enumerate}
+
+\item
+If we compare two means from two samples, and the p$>$0.05 (p is greater than 0.05), we can conclude 
+
+\begin{enumerate}
+\item[a]
+that the two samples comes from two populations with different means
+\item[b]
+ that the two samples comes from two populations with identical means
+\item[c]
+that we don't know whether two samples comes from two populations with identical means or not
+\end{enumerate}
+
+\end{enumerate}
+
+\section{Some basic knowledge before we start}
+
+In this course we are always going to be interested in estimating mean values and in quantifying our uncertainty about the accuracy of the estimate; an example is reading time: we are often interested in knowing if one kind of sentence is read faster than another kind of sentence. When we do an experiment, we obtain behavioral measures for each participant, and then we estimate means (e.g., mean reading time), and our certainty about these means. This leads us to the part that affects the science: inference. From these estimates, we want to infer what is true or false about the world. 
+
+Given a sample of some dependent variable values $x_1, \dots, x_n$, the mean, written $\bar{x}$ can be calculated using the formula:
+
+\begin{equation}
+\bar{x} = \frac{x_1 + x_2+ \dots+ x_n}{n}  = \frac{\underset{i=1}{\overset{n}{\sum}} x_i}{n}
+\end{equation}
+
+
+Example:
+
+<<>>=
+x<-1:10
+mean(x)
+@
+
+We can also quantify how much each individual value $x_i$ deviates on average from the mean value $\bar{x}$. This is called the variance, and its square root is called standard deviation or SD. All this should be familiar from school. 
+
+\begin{equation}
+ s^2 = \frac{(x_1 - \bar{x})^2 + (x_2 - \bar{x})^2 + \dots + (x_n - \bar{x})^2}{n-1} = \frac{1}{n-1} \underset{i=1}{\overset{n}{\sum}}(x_i - \bar{x})^2  
+\end{equation}
+
+Example:
+
+<<>>=
+## variance:
+var(x)
+## its square root:
+sd(x)
+@
+
+Sometimes you will see the above formula with division by $n$ rather than $n-1$. For our purposes, the distinction is uninteresting (but I can explain in class if there is interest). Note that for large n, it is not going to matter much whether you divide by $n$ or $n-1$. The book by Kerns \cite{kerns} is a good reference for the curious, and those of you who want to get deeper into this subject.
+
+So what we will generally start with is a measure of central tendency and a measure of variability. These two numbers, mean and variance (or standard deviation), are useful for a particular case where the distribution of values that we have sampled has a particular shape. This is the bell-shaped curve, known as the Gaussian distribution or the normal distribution. Many measurements in the world have a roughly normal distribution, i.e., they can be accurately characterized if we know the mean and variance. I make this more precise in the next chapter. 
+
+In essence, we are in the business of figuring out what the world looks like; specifically, in this course we are going to be constantly trying to figure out what is the true mean and variance of some \textbf{unknown} distribution of values.  The word unknown is key here. We are trying to \textbf{estimate} the \textbf{parameters} of some underlying distribution that is assumed to have generated the data, and we are trying to draw conclusions about the world from this estimate.  \textit{Basically, this is all this course is about}. It might seem boring and irrelevant to your life, but basically this estimation and inference procedure runs pretty much every aspect of your existence, both in academia and outside.  So, if you feel resistance against learning about these tools, think about the fact that without these tools you cannot do science (I am assuming that the desire to do research is what brings you to Potsdam). 
+
+Once we know the mean and variance from a sample, we are ready to so some inference. The theory of statistics is a vast and exciting area, and there is much, much more out there than I am willing to discuss in this course. But the little I will discuss will prepare you for the most common situations we encounter in linguistics.
+
+\section{How to survive and perhaps even enjoy this course}
+
+I have been teaching this course for several years now, and one reaction that I get quite often is fear, panic, and even anger.
+A common reaction is: Why do I have to learn all this? How can I do all this programming? And so on. 
+
+If you have such questions popping up in your mind, you have to stop and consider a few things before continuing with this course.  
+Linguistics at Potsdam is a very empirically driven program. It is impossible to get through a master's degree in linguistics without coming into contact with data, even in formerly armchair disciplines like syntax. If you are at Potsdam, you are automatically committed to an empirically driven education. 
+
+More broadly, there is a widespread misunderstanding that statistics is something that can be outsourced to a statistician. It's true that if you have a non-standard statistical problem you probably need to talk to a professional. But for the kinds of methods used in linguistics, you are personally responsible for the analyses you do, and so you are going to have to learn something about the methods. The fundamental thing to understand is that the statistics \textit{is} the science, it is not an add-on.
+
+Now, regarding the panic issue. In order to pass this course, you have to understand that \textbf{you have to read the lecture notes}, and that
+it is not enough to just passively \textit{read} these lecture notes. You have to play with the ideas by asking yourself questions like ``what would happen if\dots'', and then check the answer right there using R. That's the whole point of this approach to teaching statistics, that you can verify what happens under repeated sampling. There is no point in memorizing formulas; focus on developing understanding. The concepts presented here require nothing more than middle school mathematics. The ideas are not easy to understand, but simulation is a great way to develop a deeper understanding of the logic of statistical theory.
+
+Many students come in expecting to get an A in this course. It's possible to get an A, if you read the lecture notes and understand them.
+However, in general, such students need to understand that they need to learn to make mistakes, and to use these mistakes as a learning tool. If you lose marks, it is not a personal insult; it is rather a very useful message telling you that you need to think about the material again.
+
+\section{Installing R and learning basic usage}
+
+You should google the word CRAN and RStudio and install R and RStudio on your machine. We will explain basic R uage in class; also see the introductory notes on using R released on Moodle.
+You should spend some time on the CRAN website looking at the information available on R there. Look especially at the section called Contributed (navigation panel on the left on the main page).

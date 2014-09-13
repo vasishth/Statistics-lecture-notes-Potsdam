@@ -1,0 +1,117 @@
+\documentclass[12pt]{book}
+
+\usepackage[hmargin=2cm,vmargin=2cm,headsep=0.5cm]{geometry}  
+
+%% added by SV:
+\usepackage{hyperref}
+\hypersetup{a4paper=TRUE,ps2pdf=TRUE,colorlinks=TRUE,linkcolor=blue,anchorcolor=blue,filecolor=blue,pagecolor=blue,urlcolor=blue,citecolor=blue,bookmarksnumbered=true}
+\usepackage{amsmath}
+\usepackage{amssymb}
+%\usepackage{apacite}
+
+\usepackage{mathptmx}
+\usepackage{helvet}
+\usepackage{courier}
+%
+\usepackage{type1cm}         
+
+\usepackage{makeidx}         % allows index generation
+\usepackage{graphicx}        % standard LaTeX graphics tool
+                             % when including figure files
+
+\usepackage{mathtools}
+\makeatletter
+ 
+\newcommand{\explain}[2]{\underset{\mathclap{\overset{\uparrow}{#2}}}{#1}}
+\newcommand{\explainup}[2]{\overset{\mathclap{\underset{\downarrow}{#2}}}{#1}}
+ 
+\makeatother
+
+%% taken from http://brunoj.wordpress.com/2009/10/08/latex-the-framed-minipage/
+\newsavebox{\fmbox}
+\newenvironment{fmpage}[1]
+{\begin{lrbox}{\fmbox}\begin{minipage}{#1}}
+{\end{minipage}\end{lrbox}\fbox{\usebox{\fmbox}}}
+
+
+\hyphenation{distribu-tion}
+
+% see the list of further useful packages
+% in the Reference Guide
+
+\makeindex             % used for the subject index
+                       % please use the style svind.ist with
+                       % your makeindex program
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% NOTE:
+% The line below defines the location of figures generated while compiling
+% (This file will create this directory automatically, see code chunk
+% ``init'' below. 
+\SweaveOpts{prefix.string=figures/lecturesfig}
+
+\SweaveOpts{cache=TRUE}
+
+
+\begin{document}
+\SweaveOpts{concordance=TRUE}
+
+\setkeys{Gin}{width=\textwidth}
+
+\author{Taught by Shravan Vasishth [vasishth@uni-potsdam.de]}
+\title{An introduction to statistical data analysis (Summer 2014)\\ Lecture notes}
+\date{Last edited: \today}
+\maketitle
+
+\frontmatter
+
+\tableofcontents
+
+\mainmatter
+
+<<echo=FALSE>>=
+## customize
+options(prompt="> ", continue="   ",#width=59,
+show.signif.stars=FALSE)
+
+options(SweaveHooks=list(fig=function() par(bg="white", fg="black")))
+
+#set.seed(987654321)
+#load("MAS473.Rdata")
+@
+
+\SweaveInput{lecture1.Rnw}
+%%SDSM
+\SweaveInput{lecture2.Rnw}
+%%Power
+\SweaveInput{lecture3.Rnw}
+%%ANOVA: not taught in the course
+\SweaveInput{lecture4linmod.Rnw}
+\SweaveInput{review1.Rnw}
+\SweaveInput{review2.Rnw}
+\SweaveInput{review3.Rnw}
+\SweaveInput{review4.Rnw}
+\SweaveInput{review5.Rnw}
+\SweaveInput{solutions.Rnw}
+
+
+%\include{appendix}
+
+
+\backmatter%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\include{glossary}
+%\include{solutions}
+%\printindex
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\bibliographystyle{plain}
+\bibliography{/Users/shravanvasishth/Dropbox/Bibliography/bibcleaned}
+
+\end{document}
+
+
+
+
+
