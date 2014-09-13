@@ -1,0 +1,359 @@
+
+\chapter{Regression models}
+
+This section is based on Lunn et al.\cite{lunn2012bugs}
+
+We begin with a simple example.  Let the response variable be $y_i, i=1,\dots, n$, and let there be $p$ predictors, $x_{1i},\dots, x_{pi}$. Also, let
+
+\begin{equation}
+y_i \sim N(\mu_i, \sigma^2), \quad \mu_i = \beta_0 + \sum \beta x_{ki}
+\end{equation}
+
+(the summation is over the p predictors, i.e., $k=1,\dots, p$). 
+
+We need to specify a prior distribution for the parameters:
+
+\begin{equation}
+\beta_k \sim Normal(0,100^2)\quad \log \sigma \sim Unif(-100,100)
+\end{equation}
+
+Recall that one should do a sensitivity analysis, and if the choice of vague prior is influential, then we should be looking at more informative priors based on prior work. 
+
+Lunn et al advise us to center our predictors because this reduces the posterior correlation between each coefficient (the slopes) and the intercept (because the intercept is relocated to the center of the data). Lunn et al say that high levels of posterior correlation are problematic for Gibbs sampling.
+
+Let's take the beauty data as an example. We saw this data-set (taken from Gelman and Hill,\cite{gelmanhill07} if I recall correctly) in the introductory course: nicer looking professors get better teaching evaluations. The predictor is already centered. Notice that we literally follow the specification of the linear model given above. We specify the model for the data frame row by row, using a for loop, so that for each dependent variable value $y_i$ (the evaluation score) we specify how it was generated.
+
+Note that I have to set priors on $\sigma$ in order to ``recover'' the estimates that the lm function delivers in R for $\sigma$. 
+
+<<>>=
+beautydata<-read.table("data/beauty.txt",header=T)
+#summary(fm<-lm(evaluation~beauty,beautydata))
+
+## restate the data as a list for JAGS:
+data<-list(x=beautydata$beauty,y=beautydata$evaluation)
+
+cat("
+model
+   {
+    ## specify model for data:
+    for(i in 1:463){ 
+    y[i] ~ dnorm(mu[i],tau)
+    mu[i] <- beta0 + beta1 * (x[i])
+    ## residuals: to-do
+    ##res[i] <- y[i] - mu[i]
+    }
+    # priors:
+    beta0 ~ dunif(-10,10)
+    beta1 ~ dunif(-10,10)
+    tau <- 1/sigma2
+    sigma2<-pow(sigma,2)
+    #log(sigma2) <- 2* log.sigma
+    #log.sigma ~ dunif(-10,10)
+    sigma ~ dunif(0,100)
+   }",
+     file="JAGSmodels/beautyexample1.jag" )
+
+track.variables<-c("beta0","beta1","sigma")
+library(rjags)
+
+inits <- list (list(beta0=0,beta1=0))
+
+beauty.mod <- jags.model( 
+  file = "JAGSmodels/beautyexample1.jag",
+                     data=data,
+                     inits=inits,
+                     n.chains = 1,
+                      n.adapt =10000 , quiet=T)
+
+beauty.res <- coda.samples( beauty.mod,
+                                 var = track.variables,
+                              n.iter = 10000,
+                                thin = 20 ) 
+
+
+summary(beauty.res)
+
+densityplot(beauty.res)
+@
+
+In the BUGS book by Lunn et al., they give a smaller dataset as an example, involving five measurements of a rat's weight, in grams, as a function of some x (not sure what the predictor is). Note that here the centering of the predictor happens in the model code. \label{ratseg}
+
+First we load/enter the data:
+
+<<>>=
+data<-list(x=c(8,15,22,29,36),y=c(177,236,285,350,376))
+@
+
+Then we fit the linear model using \texttt{lm}, for comparison with the Bayesian model:
+<<>>=
+summary(fm<-lm(y~x,data))
+@
+
+Then define the Bayesian model; note that I put a prior on $\sigma$, not $\sigma^2$.
+
+<<>>=
+cat("
+model
+   {
+    ## specify model for data:
+    for(i in 1:5){ 
+    y[i] ~ dnorm(mu[i],tau)
+    mu[i] <- beta0 + beta1 * (x[i]-mean(x[]))
+    }
+    # priors:
+    beta0 ~ dunif(-500,500)
+    beta1 ~ dunif(-500,500)
+    tau <- 1/sigma2
+    sigma2 <-pow(sigma,2)
+    sigma ~ dunif(0,200)
+   }",
+     file="JAGSmodels/ratsexample2.jag" )
+
+track.variables<-c("beta0","beta1","sigma")
+library(rjags)
+
+inits <- list (list(beta0=10,beta1=10,sigma=10))
+
+rats.mod <- jags.model( 
+  file = "JAGSmodels/ratsexample2.jag",
+                     data=data,
+                     inits=inits,
+                     n.chains = 1,
+                      n.adapt =10000 , quiet=T)
+
+rats.res <- coda.samples( rats.mod,
+                                 var = track.variables,
+                              n.iter = 10000,
+                                thin = 20 ) 
+
+summary(rats.res)
+
+densityplot(rats.res)
+@
+
+This model gets pretty similar summaries compared to the lm function in R (check this). The estimate for sd is a bit high compared to the lm model fit, which means that the standard errors in the Bayesian model will be larger than in the lm fit.
+
+\begin{Homework}\label{uniformpriorsigma}
+For the above example, first, put a suitable uniform prior on $\sigma^2$. Compare the posterior summary with the linear model output in R.
+
+Next, put a uniform prior on log $\sigma^2$. Here's a hint:
+
+\begin{verbatim}
+log(sigma2) <- 2* log.sigma
+## need some numerical values in place of xx
+log.sigma ~ dunif(xx,xx) ## complete this and run model
+\end{verbatim}
+
+What changes in our estimates of $\sigma$ compared to the first case above?
+
+\end{Homework}
+
+\section{Multiple regression}
+
+This is the lexical decision dataset from Baayen's book.\cite{baayenbook} We fit log reading time to Trial id (centered), Native Language, and Sex. The categorical variables are centered as well.
+
+<<>>=
+library(languageR)
+data<-lexdec[,c(1,2,3,4,5,9)]
+
+contrasts(data$NativeLanguage)<-contr.sum(2)
+contrasts(data$Sex)<-contr.sum(2)
+
+summary(fm<-lm(RT~scale(Trial,scale=F)+NativeLanguage+Sex,data))
+@
+
+The JAGS model:
+
+<<>>=
+dat<-list(y=data$RT,
+          Trial=(data$Trial-mean(data$Trial)),
+          Lang=ifelse(data$NativeLanguage=="English",1,-1),
+          Sex=ifelse(data$NativeLanguage=="F",1,-1))
+
+cat("
+model
+   {
+    ## specify model for data:
+    for(i in 1:1659){ 
+    y[i] ~ dnorm(mu[i],tau)
+    mu[i] <- beta0 + 
+             beta1 * Trial[i]+
+             beta2 * Lang[i] +  beta3 * Sex[i] 
+    }
+    # priors:
+    beta0 ~ dunif(-10,10)
+    beta1 ~ dunif(-5,5)
+    beta2 ~ dunif(-5,5)
+    beta3 ~ dunif(-5,5)
+    
+    tau <- 1/sigma2
+    sigma2 <-pow(sigma,2)
+    sigma ~ dunif(0,200)
+   }",
+     file="JAGSmodels/multregexample1.jag" )
+
+track.variables<-c("beta0","beta1",
+                   "beta2","beta3","sigma")
+library(rjags)
+
+inits <- list (list(beta0=0,
+                    beta1=0,
+                    beta2=0,beta3=0,sigma=10))
+
+lexdec.mod <- jags.model( 
+  file = "JAGSmodels/multregexample1.jag",
+                     data=dat,
+                     inits=inits,
+                     n.chains = 1,
+                      n.adapt =10000 , quiet=T)
+
+lexdec.res <- coda.samples( lexdec.mod,
+                                 var = track.variables,
+                              n.iter = 10000,
+                                thin = 20 )
+
+
+summary(lexdec.res)
+@
+
+Here is the lm fit for comparison (I center all predictors):
+
+<<>>=
+contrasts(lexdec$NativeLanguage)<-contr.sum(2)
+contrasts(lexdec$Sex)<-contr.sum(2)
+summary(fm<-lm(RT~scale(Trial,scale=F)+
+                 NativeLanguage+Sex,
+               lexdec))
+@
+
+Note: We should have fit a linear mixed model here; I will return to this later.
+
+
+\section{Generalized linear models}
+
+We consider the model
+
+\begin{equation}
+y_i \sim Binomial(p_i, n_i) \quad logit(p_i) = \beta_0 + \beta_1 (x_i - \bar{x})
+\end{equation}
+
+For example, beetle data from Dobson et al.\cite{dobson2010introduction}:
+
+<<>>=
+beetledata<-read.table("data/beetle.txt",header=T)
+@
+
+The JAGS model:
+
+<<>>=
+dat<-list(x=beetledata$dose-mean(beetledata$dose),
+          n=beetledata$number,
+          #p=beetledata$killed/beetledata$number,
+          y=beetledata$killed)
+
+cat("
+model
+   {
+for(i in 1:8){
+    y[i] ~ dbin(p[i],n[i])
+    logit(p[i]) <- beta0 + beta1 * x[i]
+    ## for assessing fitted values:
+    #p.hat[i]<-y[i] / n[i]
+    #y.hat[i]<-n[i] * p[i]
+}
+    # priors:
+    beta0 ~ dunif(0,pow(100,2))
+    beta1 ~ dunif(0,pow(100,2))
+   }",
+     file="JAGSmodels/glmexample1.jag" )
+
+track.variables<-c("beta0","beta1")
+library(rjags)
+
+inits <- list (list(beta0=0,
+                    beta1=0))
+
+glm.mod <- jags.model( 
+  file = "JAGSmodels/glmexample1.jag",
+                     data=dat,
+                     inits=inits,
+                     n.chains = 1,
+                      n.adapt =10000 , quiet=T)
+
+glm.res <- coda.samples( glm.mod,
+                                 var = track.variables,
+                              n.iter = 10000,
+                                thin = 20 ) 
+
+
+summary(glm.res)
+
+plot(glm.res)
+@
+
+The values match up with glm output:
+
+<<>>=
+coef(glm(killed/number~scale(dose,scale=F),
+         weights=number,
+           family=binomial(),beetledata))
+@
+
+\begin{Homework}\label{beetle}
+Fit the beetle data again, using suitable normal distribution priors for the coefficients beta0 and beta1.
+Is the posterior distribution sensitive to the prior?
+\end{Homework}
+
+There is actually much more to say here, because we can fit a lot of other models with different link functions, but for psycholinguistic work we mostly stay with the logit. If there is interest I will give a lecture on GLMs in general, but for the most common cases in psycholinguistics we won't need that knowledge. See my GLM notes (Github) for more detail.
+
+\section{Prediction}
+
+One interesting thing we can do is to predict the posterior distribution of future or missing data. 
+One easy to way to this is to define a node for the predictor, as shown below.
+This example revisits the earlier toy example from Lunn et al.\ on the rat's data (page~\pageref{ratseg}).
+
+<<>>=
+data<-list(x=c(8,15,22,29,36),y=c(177,236,285,350,376))
+
+cat("
+model
+   {
+    ## specify model for data:
+    for(i in 1:5){ 
+    y[i] ~ dnorm(mu[i],tau)
+    mu[i] <- beta0 + beta1 * (x[i]-mean(x[]))
+    }
+    ## prediction
+    mu45 <- beta0+beta1 * (45-mean(x[]))
+    y45 ~ dnorm(mu45,tau)
+    # priors:
+    beta0 ~ dunif(-500,500)
+    beta1 ~ dunif(-500,500)
+    tau <- 1/sigma2
+    sigma2 <-pow(sigma,2)
+    sigma ~ dunif(0,200)
+   }",
+     file="JAGSmodels/ratsexample2pred.jag" )
+
+track.variables<-c("beta0","beta1","sigma","mu45")
+library(rjags)
+
+inits <- list (list(beta0=10,beta1=10,sigma=10))
+
+rats.mod <- jags.model( 
+  file = "JAGSmodels/ratsexample2pred.jag",
+                     data=data,
+                     inits=inits,
+                     n.chains = 1,
+                      n.adapt =10000, quiet=T)
+
+rats.res <- coda.samples( rats.mod,
+                                 var = track.variables,
+                              n.iter = 10000,
+                                thin = 20 ) 
+
+
+summary(rats.res)
+
+densityplot(rats.res)
+@

@@ -1,0 +1,492 @@
+
+\chapter{Using JAGS for modeling}
+
+\section{Introduction to JAGS}
+
+
+
+\section{A simple example}
+
+This example is taken from Lunn et al (their example 2.4.1).\cite{lunn2012bugs} It illustrates basic BUGS syntax, using JAGS. We can also run this model within WinBUGS, as shown below briefly. Stan is another option; I may show examples in class of Stan usage. 
+
+Suppose you have $Z\sim N(0,1)$. Assume that we transform this random variable as follows:
+
+\begin{equation}
+Y = (2Z + 1)^3
+\end{equation}
+
+We can work out the distribution of Y analytically (but it's hard, at least for me), or we can simulate it and look at the distribution, and compute any summary statistic we want.
+
+First, we write the model into a text file and save it (we do this within R). Note that in the normal distribution, the scale parameter is stated in terms of precision=1/variance. I don't know why BUGS has this convention, but it's (unfortunately) the way it is.\marginnote{My guess as to why variance is defined in terms of precision is that it's convenient for algebraic manipulation.%
+%%to-do: see p 28 of Christensen et al.
+}
+
+<<>>=
+cat("
+# Fixing data to be used in model definition
+model
+   {
+    ## the second parameter is precision=1/variance
+    Z ~ dnorm(0,1)
+    Y <- pow(2*Z + 1, 3)
+    P10 <- step(Y-10)
+   }",
+     file="JAGSmodels/binomialexample1.jag" )
+@
+
+Then we specify the variables we want to track the distribution of:
+
+<<>>=
+track.variables<-c("Y")
+@
+
+Next, we create an object representing the model. I use system.time to keep track of how long this takes. The timing issue will be interesting when we compare performance with other software like WinBUGS and Stan.
+
+<<>>=
+library(rjags,quietly=T)
+system.time(
+binomialexample1.mod <- jags.model( 
+  file = "JAGSmodels/binomialexample1.jag",
+                     n.chains = 1,
+                      n.adapt =2000 ,quiet=T)
+            )
+@
+
+Next, we generate samples:
+
+<<>>=
+system.time(
+binomialexample1.res <- coda.samples( binomialexample1.mod,
+                                 var = track.variables,
+                              n.iter = 10000,
+                                thin = 20 ) )
+@
+
+Finally, we summarize the distribution:
+
+<<>>=
+summary( binomialexample1.res )
+@
+
+We can also plot the distribution and the chain, see Fig~\ref{fig:binomialexample1}.
+
+\begin{marginfigure}[2cm]
+<<fig=T>>=
+plot(binomialexample1.res)
+@
+\caption{The distribution of the transformed binomial random variable, using JAGS.}\label{fig:binomialexample1}
+\end{marginfigure}
+
+Incidentally, you can plot the posterior distributions etc.\ in \texttt{ggplot2} if you are so inclined. See below for examples, and http://xavier-fim.net/packages/ggmcmc/ for a tutorial.
+
+<<>>=
+library(ggmcmc)
+res<-ggs(binomialexample1.res)
+#ggmcmc(res)
+ggs_histogram(res)
+ggs_density(res)
+ggs_traceplot(res)
+@
+
+Of course, we could have written the above JAGS code in R:
+
+<<>>=
+X<-rnorm(10000)
+Y<-(2*X+1)^3
+summary(Y)
+@
+
+\begin{marginfigure}
+<<fig=T>>=
+plot(density(Y))
+@
+\caption{The distribution of the transformed binomial random variable, using R.}\label{fig:binomialexample1b}
+\end{marginfigure}
+
+\section{Integrating out an unknown parameter}
+
+Suppose we have a sampling distribution $p(y\mid \theta)$.
+This could be, for example, $y\sim N(0,1)$ (here, $\theta$ is a vector representing the mean and variance). Let our certainty about the parameters be expressed by the probability distribution $p(\theta)$. In this situation, we can produce a predictive distribution by ``integrating out the unknown parameter'':\footnote{Recall the discussion about marginal pdfs, page~\pageref{marginalpdfs}.}\footnote{This trick, of integrating out the unknown parameter turns up in the estimation of linear mixed model (LMM) fixed effects parameters. 
+
+In LMMs, the model is:
+
+\begin{equation}
+Y_i = X_i \beta + Z_i \beta_i + \epsilon_i, \quad i=1,\dots,M
+\end{equation}
+
+where 
+$b_i \sim N(0,\Psi), \epsilon_i \sim N(0,\sigma^2 I)$. Let $\theta$ be the parameters that determine $\Psi$.
+
+\begin{equation}
+\begin{split}
+L(\beta,\theta,\sigma^2\mid y) =& p(y:\beta,\theta,\sigma^2)\\
+=& \prod_i^M p(y_i:\beta,\theta,\sigma^2)\\
+=& \prod_i^M \int p(y_i\mid b_i, \beta,\sigma^2)p(b_i: \theta,\sigma^2)\,db_i
+\end{split}
+\end{equation}
+
+we want the density of the observations ($y_i$) given the parameters $\beta, \theta$ and $\sigma^2$ only.  We can integrate out the nuisance parameter $b_i$, which are the BLUPs (best linear unbiased predictors) in a linear mixed model.
+to-do: spell this out with an example.}
+
+
+\begin{equation}
+p(y)= \int p(y,\theta)\, d\theta = \int p(y\mid \theta) p(\theta)\, d\theta
+\end{equation}
+
+This kind of ``integrating out'' can be done in BUGS quite easily. Suppose we have a random variable Y that has a binomial distribution with success probability $\theta$ and sample size $n$, and our uncertainty about $\theta$ is expressed as the distribution Beta(a,b). For specific values of a,b, and n (see code below), we can write the model as:
+
+<<>>=
+## remove stray Y object, otherwise JAGS gets confused:
+rm(Y)
+cat("
+model
+   {
+    theta ~ dbeta(3,27)
+    Y ~ dbin(theta,20)
+   }",
+     file="JAGSmodels/integratingout.jag")
+@
+
+Then we generate samples from $p(Y)$ in the usual way:
+
+<<echo=T,eval=F>>=
+track.variables<-c("Y")
+library(rjags)
+
+intout.mod <- jags.model( 
+  file = "JAGSmodels/integratingout.jag",
+                     n.chains = 2,
+                      n.adapt =2000 , quiet=T)
+
+intout.res <- coda.samples( intout.mod,
+                                 var = track.variables,
+                              n.iter = 10000,
+                                thin = 20 ) 
+
+summary( intout.res )
+@
+
+%\begin{marginfigure}[-6cm]
+<<echo=T,fig=F,eval=F>>=
+plot(intout.res)
+@
+%\caption{Integrating out the unknown parameter.}
+%\end{marginfigure}
+
+\begin{verbatim}
+Iterations = 20:10000
+Thinning interval = 20 
+Number of chains = 2 
+Sample size per chain = 500 
+
+1. Empirical mean and standard deviation for each variable,
+   plus standard error of the mean:
+
+          Mean             SD       Naive SE Time-series SE 
+        1.9340         1.6794         0.0531         0.0515 
+
+2. Quantiles for each variable:
+
+ 2.5%   25%   50%   75% 97.5% 
+    0     1     2     3     6 
+\end{verbatim}
+
+to-do: show to calculate $P(Y\geq 6)$.
+
+\section{Posterior predictive distributions}\label{postpredexample}
+
+This section is taken from Lunn et al., Section 3.2; slightly reworded.\cite{lunn2012bugs}
+
+Once we have the posterior distribution $f(\theta\mid y)$, we can derive the predictions based on this posterior distribution using the same trick as above.\marginnote{Here is an interesting quote on prediction: ``\dots it does not really matter whether a scientific theory is correct.\dots What matters is whether the scientific theory allows us to make useful predictions about future observations.'' p.\ 32 of Christensen et al. Statisticans are often very interested in the predictive accuracy of their statistical models.
+Note however that in planned experiments we never derive predictions from the statistical model, but rather derive predictions from our theories, which we are investigating the predictions of using the statistical model. So, we don't really care much about the predictive accuracy of our models; at least, nobody I know investigates this predictive accuracy in psycholinguistics. We will, however, do so later in this course.}
+
+\begin{equation}
+p(y_{pred}\mid y ) = \int p(y_{pred}, \theta\mid y)\, d\theta= \int 
+p(y_{pred}\mid \theta,y)p(\theta\mid y)\, d\theta
+\end{equation}
+
+Assuming that past and future observations are conditionally independent given $\theta$, i.e., $p(y_{pred}\mid \theta,y)= p(y_{pred}\mid \theta)$, we can write:
+
+\begin{equation}
+p(y_{pred}\mid y )=\int p(y_{pred}\mid \theta) p(\theta\mid y)\, d\theta
+\end{equation}
+
+We use this in the next example.
+
+\section{Computing posterior predictive distributions using JAGS}
+\label{exampleposteriorpredictive}
+
+This is very similar to the example on p.\ \pageref{ex1proportions}.
+Suppose our prior is Beta(2,2) and the data are 
+Beta(46,54), and the posterior is 
+Beta(47,55).
+
+We first define the data and model. The data includes the parameters for the prior as well (a,b), and the sample size of the predicted values.
+
+<<>>=
+## the data:
+data<-list(a=3,b=27,y=0,n=10,n.pred=20)
+
+cat("
+model
+   {
+    ## prior
+    theta ~ dbeta(a,b)
+    ## likelihood
+    y ~ dbin(theta,n)
+    ## predicted posterior distribution
+    y.pred ~ dbin(theta,n.pred)
+   }",
+     file="JAGSmodels/predictionexample1.jag" )
+
+
+track.variables<-c("y.pred","theta")
+library(rjags)
+
+predeg.mod <- jags.model( 
+  file = "JAGSmodels/predictionexample1.jag",
+                     data=data,
+                     n.chains = 4,
+                      n.adapt =2000 , quiet=T)
+
+predeg.res <- coda.samples( predeg.mod,
+                            var = track.variables,
+                            n.iter = 10000,
+                            thin = 20 ) 
+@
+
+The summary of the posterior distribution $p(\theta)$ and predicted values:
+
+<<>>=
+summary( predeg.res )
+@
+
+Exercise: Compare the above estimated means and standard deviations with the theoretical means and standard deviations.
+The distributions can also be plotted, see Fig.~\ref{fig:predeg.res}.
+
+\begin{marginfigure}[-5cm]
+<<fig=T>>=
+plot(predeg.res)
+@
+\caption{Example of predictive posterior distribution.}\label{fig:predeg.res}
+\end{marginfigure}
+
+In the above example, JAGS is sampling directly from the Beta(3,37):
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+plot(function(x) 
+  dbeta(x,shape1=3,shape2=37), 0,1,
+      main = "Posterior beta density",
+              ylab="density",xlab="X",ylim=c(0,3))
+@
+\caption{The posterior distribution computed in R.}\label{fig:posteriorbetainR}
+\end{marginfigure}
+
+%Note that there seems to be a weird problem with computing predictive distribution in linear mixed models. I need to look into that (to-do).
+
+We can also compute the probability of 2 or more successes in the predicted distribution of sample size 20 is:
+
+<<>>=
+post.pred<-jags.samples(predeg.mod,var=track.variables,n.iter=10000)
+
+## compute probability of theta > 0
+counts.pred<-table(post.pred$y.pred[,,1]>=2)
+counts.pred[2]/sum(counts.pred)
+@
+
+Similarly, you can also compute any probablistic value from the posterior distribution of $\theta$, which you would normally do with \texttt{pbeta}. 
+
+\section{Normal data with unknown mean, known variance}
+
+to-do
+
+\section{MCMC integration in JAGS}
+
+This example is from Lunn et al., example 4.1.1.\cite{lunn2012bugs}
+Suppose we have 10 successes from a sample size of 100, assuming a binomial process. Instead of a beta prior on $\theta$, we could could use a non-conjugate prior on a transformation of $\theta$: $logit(\theta)\sim N(\mu,\omega^2)$.
+Let $\omega^2=2.71$. Figuring out the posterior distribution of $\theta$ is not possible analytically; but MCMC methods allow us to simulate it.
+
+<<>>=
+## the data:
+data<-list(y=10,n=100)
+
+cat("
+model
+   {
+    ## likelihood
+    y ~ dbin(theta,n)
+    ## prior
+    logit(theta) <- logit.theta
+    ## precision 0.368 = 1/2.71
+    logit.theta ~ dnorm(0,0.368)
+   }",
+     file="JAGSmodels/mcmcexample1.jag" )
+
+
+track.variables<-c("theta")
+library(rjags)
+
+mcmceg.mod <- jags.model( 
+  file = "JAGSmodels/mcmcexample1.jag",
+                     data=data,
+                     n.chains = 1,
+                      n.adapt =2000 , quiet=T)
+
+mcmceg.res <- coda.samples( mcmceg.mod,
+                            var = track.variables,
+                            n.iter = 10000,
+                            thin = 20 ) 
+
+summary(mcmceg.res)
+@
+
+\begin{marginfigure}
+<<fig=T>>=
+densityplot(mcmceg.res)
+@
+\caption{Density plot of posterior distribution of $\theta$.}\label{fig:mcmcexample1}
+\end{marginfigure}
+
+\begin{Homework} \label{postpred}
+Modify the above code so that (a) the prior for  $\theta$ is $Unif(0,1)$, and compute the posterior predictive distribution of y (call it y.pred) for 100 future observation. Does the posterior distribution of $\theta$ change? Are the predicted values reasonable?
+\end{Homework}
+
+\section{Multi-parameter models in JAGS}
+
+Suppose that we have data $y_i$ which we believe comes from a heavy-tailed t-distribution.
+
+<<>>=
+y.sim<-rt(100,d=4)
+@
+
+Let's assume that we don't know any of the parameters and set as priors for this data:
+
+\begin{enumerate}
+\item
+$\mu \sim N(\gamma,\omega^2)$
+\item
+$1/\sigma^2 \sim Gamma(\alpha,\beta) $
+\item
+$df \sim Unif(2,30)$
+\end{enumerate}
+
+Then, the joint posterior distribution of each parameter is:
+
+\begin{equation}
+p(\mu,\sigma^2,df\mid y) \propto \hbox{Likelihood} \times [\hbox{prior}~\mu] \times [\hbox{prior}~\sigma^2] \times [\hbox{prior}~d]
+\end{equation}
+
+Now, if we want the marginal distributions, $p(\mu\mid y), p(\sigma^2\mid y), p(df\mid y)$, we can't compute these analytically. 
+JAGS will compute these for you using MCMC sampling.
+
+<<>>=
+n.samples<-100
+y.sim<-rt(n.samples,df=4)
+## the data:
+data<-list(n=n.samples,gamma=0,
+           inv.omega.squared=0.0001,
+           alpha=0.001,beta=0.001,y=y.sim)
+
+cat("
+model
+   {
+    for(i in 1:n){ y[i] ~ dt(mu,r,d)}
+    mu ~ dnorm(gamma,inv.omega.squared)
+    r ~ dgamma(alpha,beta)
+    d ~ dcat(p[])
+    p[1]<-0
+    for(i in 2:30){p[i]<-1/29}
+   }",
+     file="JAGSmodels/multimcmcexample2.jag" )
+
+track.variables<-c("mu","r","d")
+library(rjags)
+
+inits <- list (list(mu=0,r=1,d=10))
+
+mcmceg.mod <- jags.model( 
+  file = "JAGSmodels/multimcmcexample2.jag",
+                     data=data,
+                     inits=inits,
+                     n.chains = 1,
+                      n.adapt =10000 ,quiet=T)
+
+mcmceg.res <- coda.samples( mcmceg.mod,
+                                 var = track.variables,
+                              n.iter = 10000,
+                                thin = 20 )
+
+#summary(mcmceg.res)
+@
+
+\begin{marginfigure}
+<<fig=TRUE>>=
+post<-jags.samples(mcmceg.mod,
+                   var=track.variables,
+                   n.iter=10000)
+op<-par(mfrow=c(1,3),pty="s")
+hist(post$d)
+hist(post$mu)
+hist(post$r)
+@
+\caption{Example of MCMC sampling with (intractable) multiparameter models.}\label{fig:multimcmc}
+\end{marginfigure}
+
+
+Incidentally, such a model can be fit in WinBUGs as well. Because the original WinBUGS interface is so tedious (so many windows, so little time), I use Andrew Gelman's approach to running WinBUGS (which works only in Windows or Windows emulators like WINE---see Gelman's home page for more details and examples) via R. Below is the code in WinBUGS that does the same as the JAGS code above.  We won't be using WinBUGS much, but I include this example because most books seem to use WinBUGS and so some familiarity with WinBUGS models will eventually be needed if you read textbooks on bayesian methods.
+
+\begin{verbatim}
+cat("model {
+     for (i in 1:n){
+       y[i] ~ dt (mu, r, d)}
+       mu ~ dnorm(gamma,inv.omega.squared)
+       r ~ dgamma(alpha,beta)
+       d ~ dcat(p[])
+       p[1]<-0
+       for(j in 2:30){p[j]<-1/29}
+   }",
+     file="WinBUGsmodels/multimcmcexample2.bug" )
+
+library(arm)
+
+n.samp<-100
+y.sim<-rt(n.samp,df=4)
+
+data<-list(n=n.samp,gamma=0,inv.omega.squared=0.0001,
+           alpha=0.001,beta=0.001,y=y.sim)
+
+inits <- list (list(mu=0,r=1,d=10))
+parameters <- c("mu", "r", "d")
+
+## change this for your system:
+mybugsdir<-"C:/Users/Shravan/Desktop/winbugs14/WinBUGS14/"
+
+model.sim <- bugs (data, inits, parameters, 
+             "WinBUGsmodels/multimcmcexample2.bug", 
+              n.chains=1, n.iter=10000,debug=TRUE,
+              bugs.directory=mybugsdir) 
+
+print(model.sim)
+plot(model.sim)
+\end{verbatim}
+
+Here is a comparison of JAGS and WinBUGS output (I ran the latter on Windows):
+
+\begin{verbatim}
+## JAGS:
+     Mean    SD Naive SE Time-series SE
+mu  0.824 98.57    1.559          1.534
+r   1.590 39.39    0.623          0.623
+d  16.190  8.42    0.133          0.141
+
+   2.5%   25%       50%       75%    97.5%
+mu -190 -63.5  1.61e+00  6.76e+01 1.95e+02
+r     0   0.0 1.76e-299 4.46e-128 7.28e-10
+d     2   9.0  1.60e+01  2.40e+01 3.00e+01
+##WinBUGS:
+        mean  sd  2.5%   25%   50%   75% 97.5%
+mu         0.0 0.1  -0.2  -0.1   0.0   0.1   0.3
+r          0.8 0.2   0.5   0.6   0.8   0.9   1.3
+d          9.1 7.0   3.0   4.0   6.0  12.0  28.0
+\end{verbatim}

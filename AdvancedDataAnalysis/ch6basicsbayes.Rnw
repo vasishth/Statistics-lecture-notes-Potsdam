@@ -1,0 +1,1050 @@
+\chapter{Basics of bayesian statistics}
+
+Recall Bayes rule:
+
+\begin{theorem}\label{thm:bayes2}
+  \textbf{Bayes' Rule}. Let $B_{1}$, $B_{2}$, ..., $B_{n}$ be mutually exclusive and exhaustive and let $A$ be an event with 
+  $\mathbb{P}(A)>0$. Then 
+
+\begin{equation}
+\mathbb{P}(B_{k}|A)=\frac{\mathbb{P}(B_{k})\mathbb{P}(A|B_{k})}{\sum_{i=1}^{n}\mathbb{P}(B_{i})\mathbb{P}(A|B_{i})},\quad k=1,2,\ldots,n.\label{eq-bayes-rule}
+\end{equation}	
+\end{theorem}
+
+When A and B are observable events, 
+we can state the rule as follows:
+
+\begin{equation}
+p(A\mid B) = \frac{p(B\mid A) p(A)}{p(B)}
+\end{equation}
+
+Note that $p(\cdot)$ is the probability of an event.
+
+%[to-do: Need some more detail here about marginal likelihood, p.\ 51 \cite{lynch2007introduction}, and how this can be ignored in the equation.]
+
+When looking at probability distributions, we will encounter the rule in the following form. 
+
+\begin{equation}
+f(\theta\mid \hbox{data}) = \frac{f(\hbox{data}\mid \theta) f(\theta)}{f(y)}
+\end{equation}
+
+Here, $f(\cdot)$ is a probability density, not the probability of a single event.
+$f(y)$ is called a ``normalizing constant'', which makes the left-hand side a probability distribution. 
+
+\begin{equation}
+f(y)= \int f(x,\theta)\, d\theta = \int \explain{f(y\mid \theta)}{likelihood} \explain{f(\theta)}{prior}\, d\theta
+\end{equation}
+
+If $\theta$ is a discrete random variable taking one value from the set $\{\theta_1,\dots,\theta_n \}$, then 
+
+\begin{equation}
+f(y)= \sum_{i=1}^{n} f(y\mid \theta_i) P(\theta=\theta_i)
+\end{equation}
+
+
+Without the normalizing constant, we have the relationship:
+
+\begin{equation}
+f(\theta\mid \hbox{data}) \propto f(\hbox{data}\mid \theta) f(\theta)
+\end{equation}
+
+Note that the likelihood $L(\theta; \hbox{data})$ (our data is fixed) is proportional to $f(\hbox{data}\mid \theta)$, and that's why we can refer to $f(\hbox{data}\mid \theta)$ as the likelihood in the following bayesian incantation:
+
+
+\begin{equation}
+\hbox{Posterior} \propto \hbox{Likelihood}\times \hbox{Prior}
+\end{equation}
+
+Our central goal is going to be to derive the posterior distribution and then summarize its properties (mean, median, 95\% credible interval, etc.).\marginnote{``To a Bayesian, the best information one can ever have about $\theta$ is to know the posterior density.'' p.\ 31 of Christensen et al's book.}
+Usually, we don't need the normalizing constant to understand the properties of the posterior distribution. That's why Bayes theorem is often stated in terms of the proportionality shown above. 
+
+Incidentally, this is supposed to be the moment of great divide between frequentists and bayesians: the latter assign a probability distribution to the parameter, the former treat the parameter as a point value.
+
+Two examples will clarify how we can use Bayes' rule to obtain the posterior.
+
+\paragraph{Example 1: Proportions}\label{ex1proportions}
+
+This is a contrived example, just meant to  provide us with an entry point into bayesian data analysis. Suppose that an aphasic patient answered 46 out of 100 questions correctly in a particular task. The research question is, what is the probability that their average response is greater than 0.5, i.e., above chance.
+
+The likelihood function will tell us $P(\hbox{data}\mid \theta)$:
+
+<<>>=
+dbinom(46, 100, 0.5)
+@
+
+Note that 
+
+\begin{equation}
+P(\hbox{data}\mid \theta) \propto \theta^{46} (1-\theta)^{54}
+\end{equation}
+
+%That's why we can use the beta distribution with parameters a=46, b= 44 for the likelihood. 
+
+So, to get the posterior, we just need to work out a prior distribution $f(\theta)$.
+
+\begin{equation}
+f(\theta\mid \hbox{data}) \propto f(\hbox{data}\mid \theta) \explain{f(\theta)}{prior}
+\end{equation}
+
+For the prior, we need a distribution that can represent our uncertainty about p. The beta distribution (a generalization of the continuous uniform distribution) is commonly used as prior for proportions.\marginnote{We say that the Beta distribution is conjugate to the binomial density; i.e., the two densities have similar functional forms.}
+
+The pdf is\footnote{Incidentally, there is a connection between the beta and the gamma:
+
+\begin{equation*}
+B(a,b) = \int_0^1 x^{a-1}(1-x)^{b-1}\, dx = \frac{\Gamma(a)\Gamma(b)}{\Gamma(a+b)}  
+\end{equation*}
+
+\noindent
+which allows us to rewrite the beta PDF as
+
+\begin{equation}
+f(x)=\frac{\Gamma(a+b)}{\Gamma(a)\Gamma(b)}\, x^{a-1}(1-x)^{b-1},\quad 0 < x < 1.
+\end{equation}
+
+Here, $x$ refers to the probability $p$.
+}
+
+
+\begin{equation*}
+f(x)=  \left\{   
+\begin{array}{l l}
+       \frac{1}{B(a,b)} x^{a - 1} (1-x)^{b-1}  & \quad \textrm{if } 0< x < 1\\
+       0 & \quad \textrm{otherwise}\\
+\end{array} \right.
+\end{equation*}
+
+\noindent
+where
+
+\begin{equation*}
+B(a,b) = \int_0^1 x^{a-1}(1-x)^{b-1}\, dx
+\end{equation*}
+
+
+In R, we write $X\sim\mathsf{beta}(\mathtt{shape1}=\alpha,\,\mathtt{shape2}=\beta)$. The associated $\mathsf{R}$ function is $\mathtt{dbeta(x, shape1, shape2)}$. 
+
+The mean and variance are
+
+\begin{equation} 
+E[X]=\frac{a}{a+b}\mbox{ and }Var(X)=\frac{ab}{\left(a+b\right)^{2}\left(a+b+1\right)}.
+\end{equation}
+
+The beta distribution's parameters a and b can be interpreted as (our beliefs about) prior successes and failures, and are called \textbf{hyperparameters}. Once we choose values for a and b, we can plot the beta pdf. Here, I show the beta pdf for three sets of values of a,b:
+
+<<betas>>=
+plot(function(x) 
+  dbeta(x,shape1=2,shape2=2), 0,1,
+      main = "Beta density",
+              ylab="density",xlab="X",ylim=c(0,3))
+
+text(.5,1.1,"a=2,b=2")
+
+plot(function(x) 
+  dbeta(x,shape1=3,shape2=3),0,1,add=T)
+text(.5,1.6,"a=3,b=3")
+
+
+plot(function(x) 
+  dbeta(x,shape1=6,shape2=6),0,1,add=T)
+text(.5,2.6,"a=6,b=6")
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<betas>>
+@
+\caption{Examples of the beta distribution with different parameter values.}\label{fig:betaeg}
+\end{marginfigure}
+
+As the figure shows, as the a,b values are increased, the shape begins to resemble the normal distribution. 
+
+If we don't have much prior information, we could use a=b=2; this gives us a uniform prior; this is called an uninformative prior or non-informative prior (although having no prior knowledge is, strictly speaking, not uninformative). If we have a lot of prior knowledge and/or a strong belief that p has a particular value, we can use a larger a,b to reflect our greater certainty about the parameter. Notice that the larger our parameters a and b, the smaller the spread of the distribution; this makes sense because a larger sample size (a greater number of successes a, and a greater number of failures b) will lead to more precise estimates.
+
+The central point is that the beta distribution can be used to define the prior distribution of p.
+
+Just for the sake of argument, let's take four different beta priors, each reflecting increasing certainty. 
+
+\begin{enumerate}
+\item 
+Beta(a=2,b=2)
+\item
+Beta(a=3,b=3)
+\item 
+Beta(a=6,b=6)
+\item
+Beta(a=21,b=21)
+\end{enumerate}
+
+Each (except perhaps the first) reflects a belief that p=0.5, with varying degrees of (un)certainty. Now we just need to plug in the likelihood and the prior:
+
+\begin{equation}
+f(\theta\mid \hbox{data}) \propto f(\hbox{data}\mid \theta) f(\theta)
+\end{equation}
+
+The four corresponding posterior distributiosn would be (I hope I got the sums right):
+
+\begin{equation}
+f(\theta\mid \hbox{data}) \propto [p^{46} (1-p)^{54}] [p^{2-1}(1-p)^{2-1}] = p^{47} (1-p)^{55}
+\end{equation}
+
+\begin{equation}
+f(\theta\mid \hbox{data}) \propto [p^{46} (1-p)^{54}] [p^{3-1}(1-p)^{3-1}] = p^{48} (1-p)^{56}
+\end{equation}
+
+\begin{equation}
+f(\theta\mid \hbox{data}) \propto [p^{46} (1-p)^{54}] [p^{6-1}(1-p)^{6-1}] = p^{51} (1-p)^{59}
+\end{equation}
+
+\begin{equation}
+f(\theta\mid \hbox{data}) \propto [p^{46} (1-p)^{54}] [p^{21-1}(1-p)^{21-1}] = p^{66} (1-p)^{74}
+\end{equation}
+
+We can now visualize each of these triplets of priors, likelihoods and posteriors. Note that I use the beta to model the likelihood because this allows me to visualize all three (prior, lik., posterior) in the same plot. The likelihood function is actually:
+
+<<binomlik>>=
+theta=seq(0,1,by=0.01)
+
+plot(theta,dbinom(x=46,size=100,prob=theta),
+     type="l",main="Likelihood")
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<binomlik>>
+@
+\caption{Binomial likelihood function.}\label{fig:binomplot}
+\end{marginfigure}
+
+We can represent the likelihood in terms of the beta as well:
+
+<<binomasbeta>>=
+plot(function(x) 
+  dbeta(x,shape1=46,shape2=54),0,1,
+              ylab="",xlab="X")
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<binomasbeta>>
+@
+\caption{Using the beta distribution to represent a binomial.}\label{fig:betaforbinom}
+\end{marginfigure}
+
+\begin{Homework} \label{plotpriors}
+Plot the priors, likelihoods, and posterior distributions in the four cases above.
+\end{Homework}
+%First case:
+
+<<binomexample1,echo=F>>=
+##lik:
+plot(function(x) 
+  dbeta(x,shape1=46,shape2=54),0,1,
+              ylab="",xlab="X",col="red")
+
+## prior:
+plot(function(x) 
+  dbeta(x,shape1=2,shape2=2), 0,1,
+      main = "Prior",
+              ylab="density",xlab="X",add=T,lty=2)
+
+## posterior
+plot(function(x) 
+  dbeta(x,shape1=48,shape2=56), 0,1,
+      main = "Posterior",
+              ylab="density",xlab="X",add=T)
+
+legend(0.1,6,legend=c("post","lik","prior"),
+       lty=c(1,1,2),col=c("black","red","black"))
+@
+
+
+
+\paragraph{Example 2: Proportions}
+
+This example is taken from a Copenhagen course on bayesian data analysis that I attended in 2012.
+
+For a single Bernoulli trial, the \textbf{likelihood} for possible parameters value $\theta_j$ (which we, for simplicity, fix at four values, 0.2, 0.4, 0.6, 0.8.) is:\footnote{See page \pageref{commondistrn} for the definition of the binomial distribution. The Bernoulli distribution is the binomial with n=1.}
+
+\begin{equation}
+p(y\mid \theta_j) = \theta_j^y (1-\theta_j)^{1-y} 
+\end{equation}
+
+<<>>=
+y<-1
+n<-1
+
+thetas<-seq(0.2,0.8,by=0.2)
+
+likelihoods<-rep(NA,4)
+for(i in 1:length(thetas)){
+  likelihoods[i]<-dbinom(y,n,thetas[i])  
+}
+@
+
+Note that these do not sum to 1:
+
+<<>>=
+sum(likelihoods)
+@
+
+Question: How can we make them sum to 1? I.e., how can we make the likelihood a proper pmf? Think about this before reading further.
+
+Let the \textbf{prior} distribution of the parameters be $p(\theta_j)$; let this be a uniform distribution over the possible values of $\theta_j$.
+
+<<>>=
+(priors<-rep(0.25,4))
+@
+
+The prior is a proper probability distribution.
+
+For any outcome $y$ (which could be 1 or 0---this is a single trial), the posterior probability of success (a 1) is related to the prior and likelihood by the relation:
+
+\begin{equation}
+p(\theta_j\mid y) \propto p(\theta_j) \theta_j^y (1-\theta_j)^{1-y} 
+\end{equation}
+
+To get the posterior to be a proper probability distribution, you have to make sure that the RHS sums to 1. 
+
+<<>>=
+liks.times.priors<-likelihoods * priors
+
+## normalizing constant:
+sum.lik.priors<-sum(liks.times.priors)
+
+posteriors<- liks.times.priors/sum.lik.priors
+@
+
+Note that the posterior distribution sums to 1, because we \textbf{normalized} it. 
+
+
+Now suppose our sample size was 20, and the number of successes 15. What does the posterior distribution look like now?
+
+<<>>=
+n<-20
+y<-15
+
+priors<-rep(0.25,4)
+
+likelihoods<-rep(NA,4)
+for(i in 1:length(thetas)){
+  likelihoods[i]<-dbinom(y,n,thetas[i])  
+}
+
+liks.priors<-likelihoods * priors
+
+sum.lik.priors<-sum(liks.priors)
+
+(posteriors<- liks.priors/sum.lik.priors)
+@
+
+Now suppose that we had a non-zero prior probability to extreme values (0,1) to $\theta$. The prior is now defined over six values, not four, so the probability distribution on the priors changes accordingly to 1/6 for each value of $\theta$.
+
+Given the above situation of n=20, y=15, what will change in the posterior distribution compared to what we just computed:
+
+<<>>=
+posteriors
+@
+
+Let's find out:
+
+<<>>=
+thetas<-seq(0,1,by=0.2)
+priors<-rep(1/6,6)
+
+y<-15
+n<-20
+
+likelihoods<-rep(NA,6)
+for(i in 1:length(thetas)){
+  likelihoods[i]<-dbinom(y,n,thetas[i])  
+}
+
+liks.priors<-likelihoods * priors
+
+sum.lik.priors<-sum(liks.priors)
+
+(posteriors<- liks.priors/sum.lik.priors)
+@
+
+How would the posteriors change if we had only one trial (a Bernoulli trial)? Let's find out:
+
+<<>>=
+thetas<-seq(0,1,by=0.2)
+priors<-rep(1/6,6)
+
+y<-1
+n<-1
+
+j<-6 ## no. of thetas
+likelihoods<-rep(NA,6)
+for(i in 1:length(thetas)){
+  likelihoods[i]<-dbinom(y,n,thetas[i])  
+}
+
+liks.priors<-likelihoods * priors
+
+sum.lik.priors<-sum(liks.priors)
+
+posteriors<- liks.priors/sum.lik.priors
+@
+
+We have been using discrete prior distributions so far. We might want to use a continuous prior distribution if we have prior knowledge that, say, the true value lies between 0.2 and 0.6, with mean 0.4. If our prior should have mean 0.4 and sd 0.1, we can figure out what the corresponding parameters of the beta distribution should be. (Look up the mean and variance of the beta distribution, and solve for the parameters; see page \pageref{betadef} for information on the beta distribution.)
+You should be able to prove analytically that a= 9.2, b=13.8.
+
+Let's plot the prior:
+
+<<priorexample2>>=
+x<-seq(0,1,length=100)
+plot(x,dbeta(x,shape1=9.2,shape2=13.8),type="l")
+@
+
+\begin{marginfigure}
+<<fig=TRUE,echo=F>>=
+<<priorexample2>>
+@
+\caption{The prior in terms of the beta distribution.}\label{betapriorexample2}
+\end{marginfigure}
+
+Then the likelihood:
+Likelihood is a function of the parameters $\theta$.
+
+<<likexample2>>=
+thetas<-seq(0,1,length=100)
+probs<-rep(NA,100) 
+
+for(i in 1:100){
+probs[i]<-dbinom(15,20,thetas[i])
+}
+
+plot(thetas,probs,main="Likelihood of y|theta_j",type="l")
+@
+
+\begin{marginfigure}
+<<fig=TRUE,echo=F>>=
+<<likexample2>>
+@
+\caption{Likelihood.}\label{likexample2}
+\end{marginfigure}
+
+This likelihood can equally well be presented as a beta distribution because
+the beta distribution's parameters a and b can be interpreted as prior successes and failures. 
+
+<<likbetaexample2>>=
+x<-seq(0,1,length=100)
+plot(x,dbeta(x,shape1=15,shape2=5),type="l")
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<likbetaexample2>>
+@
+\caption{Likelihood in terms of the beta.}\label{fig:likbetaexample2}
+\end{marginfigure}
+
+Since we multiply the beta distribution representing the prior and the beta distribution representing the likelihood:
+
+\begin{equation}
+Beta(9.2,13.8) * Beta(15,5) = Beta(a=9.2+15, b=13.8 + 5)
+\end{equation}
+
+<<posteriorexample2>>=
+thetas<-seq(0,1,length=100)
+a.star<-9.2+15
+b.star<-13.8+5
+plot(thetas,dbeta(thetas,shape1=a.star,shape2=b.star),
+     type="l")
+@
+
+\begin{marginfigure}
+<<fig=TRUE,echo=F>>=
+<<posteriorexample2>>
+@
+\caption{Example of posterior distribution.}\label{fig:posteriorexample2}
+\end{marginfigure}
+
+We can also plot all three (prior, likelihood, posterior) in one figure:
+
+
+<<priorlikpost>>=
+par(mfrow=c(3,1))
+
+## prior
+plot(thetas,dbeta(x,shape1=9.2,shape2=13.8),type="l",
+     main="Prior")
+
+## lik
+probs<-rep(NA,100) 
+
+for(i in 1:100){
+probs[i]<-dbinom(15,20,thetas[i])
+}
+
+plot(thetas,probs,main="Likelihood of y|theta_j",type="l")
+
+## post
+x<-seq(0,1,length=100)
+
+a.star<-9.2+15
+b.star<-13.8+5
+
+plot(x,dbeta(x,shape1=a.star,shape2=b.star),type="l",
+     main="Posterior")
+@
+
+\begin{marginfigure}[4cm]
+<<fig=TRUE,echo=F>>=
+<<priorlikpost>>
+@
+\caption{The prior, likelihood and posterior distributions in example 2.}\label{fig:priorlikpost}
+\end{marginfigure}
+
+
+<<echo=F,include=F>>=
+plot.it<-function(m=0.4,s=0.1,k=15,n=20){
+  ## compute a,b
+  a.plus.b<-((m*(1-m))/s^2)-1
+  a<-a.plus.b*m
+  b<-a.plus.b-a
+  
+  ##prior
+thetas<-seq(0,1,length=100)
+plot(thetas,dbeta(thetas,shape1=a,shape2=b),type="l",main="",ylab="")
+
+probs<-dbinom(k,n,thetas)  
+lines(thetas,probs,type="l",lty=2)
+  
+## post
+a.star<-a+k
+b.star<-b+(n-k)
+
+lines(thetas,dbeta(thetas,shape1=a.star,shape2=b.star),lty=3,lwd=3,type="l")
+}
+
+plot.it()
+
+plot.it(m=0.5,s=0.4,k=15,n=20)
+@
+
+\begin{Homework} \label{genericfunction}
+Write a generic function that, for a given set of values for the prior (given mean's and sd's), and given the data (number of successes and failures), plots the appropriate posterior (alongside the priors and likelihood).
+\end{Homework}
+
+\begin{Homework}\label{femalebirths}
+(This exercise is from the Copenhagen course of 2012. I quote it verbatim).
+
+``The French mathematician Pierre-Simon Laplace (1749-1827) was the first person to show definitively that the proportion of female births in the French population was less then $0.5$, in the late 18th century, using a Bayesian analysis based on a uniform prior distribution\cite{Gelman}). Suppose you were doing a similar analysis but you had more definite prior beliefs about the ratio of male to female births. In particular, if $\theta$ represents the proportion of female births in a given population, you are willing to place a Beta(100,100) prior distribution on $\theta$.
+
+\begin{enumerate}
+\item
+Show that this means you are more than 95\% sure that $\theta$ is between $0.4$ and $0.6$, although you are ambivalent as to whether it is greater or less than $0.5$.
+\item Now you observe that out of a random sample of $1,000$ births, $511$ are boys. What is your posterior probability that $\theta> 0.5$?''
+\end{enumerate}
+\end{Homework}
+
+\begin{Homework} \label{hiv}
+[This problem is taken from Lunn et al.\cite{lunn2012bugs}, their example 3.1.1.]
+Suppose that 1 in 1000 people in a population are expected to get HIV. Suppose a test is administered on a suspected HIV case, where the test has a true positive rate (the proportion of positives that are actually HIV positive) of 95\%  and true negative rate (the proportion of negatives are actually HIV negative) 98\%. 
+Use Bayes theorem to find out the probability that a patient testing positive actually has HIV.
+\end{Homework}
+
+\section{Class activities}
+
+\subsection{The posterior is the weighted mean of the prior mean and the MLE}
+
+Suppose we are modeling the number of times that a 
+speaker says the word ``the'' per day.
+
+The number of times $x$ that the word is uttered in one day can be modeled by a Poisson distribution:
+
+\begin{equation}
+f(x\mid \theta) = \frac{\exp(-\theta) \theta^x}{x!}
+\end{equation}
+
+where the rate $\theta$ is unknown, and the numbers of utterances of the target word on each day are independent given $\theta$.
+
+We are told that the prior mean of $\theta$ is 100 and prior variance for $\theta$  is 225.
+
+\paragraph{Task 1} 
+Fit a gamma density prior for $\theta$ based on the above information. 
+
+Note that we know that for a gamma density with parameters a, b, the mean is  $\frac{a}{b}$ and the variance is
+$\frac{a}{b^2}$.
+Hint: Since we are given values for the mean and variance, we can solve for a,b, which gives us the gamma density. 
+
+\begin{versionclass}
+%% solution
+If $\frac{a}{b}=100$ and $\frac{a}{b^2}=225$, it follows that
+$a=100\times b=225\times b^2$ or $100=225\times b$, i.e., 
+$b=\frac{100}{225}$.
+
+This means that $a=\frac{100\times100}{225}=\frac{10000}{225}$.
+Therefore, the gamma distribution for the prior is as shown below (also see Fig~\ref{fig1}):
+
+\begin{equation}
+\theta \sim Gamma(\frac{10000}{225},\frac{100}{225})
+\end{equation}
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+x<-0:200
+plot(x,dgamma(x,10000/225,100/225),type="l",lty=1,main="Gamma prior",ylab="density",cex.lab=2,cex.main=2,cex.axis=2)
+@
+\caption{The gamma prior for $\theta$.}\label{fig1}
+\end{marginfigure}
+
+\end{versionclass}
+
+\paragraph{Task 2}
+
+A distribution for a prior is \textbf{conjugate} if, multiplied by the likelihood, it yields a posterior that has the distribution of the same family as the prior. 
+
+Example: the gamma distribution is a conjugate prior for the poisson distribution.
+
+For the gamma distribution to be a conjugate prior for the poisson, the posterior needs to have the general form of a gamma distribution. 
+
+Given that 
+
+\begin{equation}
+\hbox{Posterior} \propto \hbox{Prior}~\hbox{Likelihood}
+\end{equation}
+
+and given that the likelihood is:
+
+\begin{equation}
+\begin{split}
+L(\mathbf{x}\mid \theta) =& \prod_{i=1}^n \frac{\exp(-\theta) \theta^{x_i}}{x_i!}\\
+          =& \frac{\exp(-n\theta) \theta^{\sum_i^{n} x_i}}{\prod_{i=1}^n x_i!}\\
+\end{split}          
+\end{equation}
+
+
+we can compute the posterior as follows:
+
+\begin{equation}
+\hbox{Posterior} = [\frac{\exp(-n\theta) \theta^{\sum_i^{n} x_i}}{\prod_{i=1}^n x_i!} ]
+[\frac{b^a \theta^{a-1}\exp(-b\theta)}{\Gamma(a)}]
+\end{equation}
+
+Disregarding the terms $x!,\Gamma(a), b^a$,  which do not involve $\theta$, we have
+
+\begin{equation}
+\begin{split}
+\hbox{Posterior} \propto &  \exp(-n\theta)  \theta^{\sum_i^{n} x_i} \theta^{a-1}\exp(-b\theta)\\
+=& \theta^{a-1+\sum_i^{n} x_i} \exp(-\theta (b+n))
+\end{split}
+\end{equation}
+
+Figure out the parameters of the posterior distribution, and show that it will be a gamma distribution.
+
+Hint: The gamma distribution in general is $Gamma(a,b) \propto \theta^{a-1} \exp(-\theta b)$. So it's enough to state the above as a gamma distribution with some parameters a*, b*.
+
+\begin{versionclass}
+
+If we equate $a^{*}-1=a-1+\sum_i^{n} x_i$ and $b^{*} = b+n$, we can rewrite the above as:
+
+\begin{equation}
+\theta^{a^{*}-1} \exp(-\theta b^{*})
+\end{equation}
+
+This means that $a^{*}=a+\sum_i^{n} x_i$ and $b^{*}=b+n$.
+We can find a constant $k$ such that the above is a proper probability density function, i.e.:
+
+\begin{equation}
+\int_{-\infty}^{\infty} k \theta^{a^{*}-1} \exp(-\theta b^{*})=1
+\end{equation}
+
+Thus, the posterior has the form of  a Gamma distribution with parameters 
+$a^{*}=a+\sum_i^{n} x_i, b^{*}=b+n$. Hence the gamma distribution is a conjugate prior for the Poisson.
+\end{versionclass}
+
+\paragraph{Task 3} Given that the number of ``the'' utterances is $115, 97, 79, 131$, we can derive the posterior distribution as follows.
+
+The prior is Gamma(a=10000/225,b=100/225). The data are as given; this means that $\sum_i^{n} x_i = 422$ and sample size $n=4$.
+It follows that the posterior is 
+
+\begin{equation}
+\begin{split}
+Gamma(a^{*}= a+\sum_i^{n} x_i, b^{*}=b+n) =& 
+Gamma(10000/225+422,4+100/225)\\
+=& Gamma(466.44,4.44)\\
+\end{split}
+\end{equation}
+
+The mean and variance of this distribution can be computed using the fact that the mean is $\frac{a*}{b*}=466.44/4.44=\Sexpr{round(466.44/4.4444,digits=2)}$ and the variance is $\frac{a*}{b*^{2}}=466.44/4.44^2=\Sexpr{round(466.44/(4.4444^2),digits=2)}$.
+
+
+<<echo=F>>=
+## load data:
+data<-c(115,97,79,131)
+
+a.star<-function(a,data){
+  return(a+sum(data))
+}
+
+b.star<-function(b,n){
+  return(b+n)
+}
+
+new.a<-a.star(10000/225,data)
+new.b<-b.star(100/225,length(data))
+
+## post. mean
+post.mean<-new.a/new.b ## checks out in JAGS
+## post. var:
+post.var<-new.a/(new.b^2) ## checks out in JAGS
+
+new.data<-c(200)
+
+new.a.2<-a.star(new.a,new.data)
+new.b.2<-b.star(new.b,length(new.data))
+
+## new mean
+new.post.mean<-new.a.2/new.b.2
+## new var:
+new.post.var<-new.a.2/(new.b.2^2)
+@
+
+\paragraph{Task 4}
+Verify the above result by fitting a model in JAGS and running it.
+
+Hint: the model will look like this:
+
+\begin{verbatim}
+model
+   {
+for(i in 1:4){
+  y[i] ~ dpois(theta)
+}
+  ##prior
+  ## gamma params derived from given information:  
+  theta ~ SPECIFY PRIOR DISTRIBUTION
+}
+\end{verbatim}
+
+
+\begin{versionclass}
+
+<<echo=F>>=
+## specify data:
+dat<-list(y=c(115,97,79,131))
+
+## model specification:
+cat("
+model
+   {
+for(i in 1:4){
+  y[i] ~ dpois(theta)
+}
+  ##prior
+  ## gamma params derived from given info:  
+  theta ~ dgamma(10000/225,100/225)
+}",
+    file="poisexercise1.jag" )
+
+## specify variables to track
+## the posterior distribution of:
+track.variables<-c("theta")
+
+## load rjags library:
+library(rjags,quietly=T)
+
+## define model:
+poisex1.mod <- jags.model( 
+    data = dat,
+    file = "poisexercise1.jag",
+    n.chains = 4,
+    n.adapt =2000 ,quiet=T)
+
+## run model:
+poisex1.res <- coda.samples( poisex1.mod,
+               var = track.variables,
+               n.iter = 100000,
+               thin = 50 ) 
+
+## summarize and plot:
+#plot(poisex1.res)
+@
+
+According to the JAGS model, the mean is \Sexpr{round(summary(poisex1.res)$statistics[1],digits=2)}, and the variance is 
+\Sexpr{round(summary(poisex1.res)$statistics[2]^2,digits=2)}.
+This matches up well with the above analytically derived results.
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+plot(poisex1.res)
+@
+\caption{The posterior distribution using JAGS.}\label{fig2}
+\end{marginfigure}
+
+\end{versionclass}
+
+<<echo=F>>=
+#gelman.diag(poisex1.res)
+@
+
+\paragraph{Task 5}
+Plot the prior, likelihood, and posterior associated with the above model fit.
+
+\begin{versionclass}
+\begin{figure}
+<<fig=T,echo=F>>=
+## lik: 
+x<-0:200
+plot(x,dpois(x,lambda=mean(dat$y)),type="l",ylim=c(0,.1),ylab="")
+
+## normal approximation:
+#lines(x,dnorm(x,mean=mean(dat$y),sd=sqrt(mean(dat$y))),lty=2,col="red",lwd=3)
+
+## gamma for the likelihood:
+#a/b=105.5, a/b^2=105.5
+## a = 105.5*b and a=105.5*b^2
+## 105.5*b = 105.5*b^2
+## 105.5=105.5 * b -> b=1
+## a=105.5, b=1
+#lines(x,dgamma(x,shape=105.5,rate=1),
+#      lty=1,col="red",lwd=3)
+
+## prior: gamma(10000/225,100/225)
+lines(0:200,dgamma(0:200,shape=10000/225, rate = 100/225),
+      lty=2)
+
+#posterior from JAGS:
+lines(0:200,dgamma(0:200,shape=466.44, rate = 4.44),col="red",lwd=3)
+
+#legend(0.08,150,legend=c("lik","prior","post"),
+#       lty=c(1,2,1),col=c("black","red","red"))
+@
+\caption{The broken line is the prior (gamma), the solid black line is the likelihood, and the thick red line is the posterior.}\label{fig3}
+\end{figure}
+
+\end{versionclass}
+
+\subsection{The posterior as a weighted mean of prior and likelihood}
+
+We can express the posterior mean as a weighted sum of the prior mean and the maximum likelihood estimate of $\theta$.
+
+The posterior mean is:
+
+\begin{equation}
+\frac{a*}{b*}=\frac{a + \sum x_i }{n+b}
+\end{equation}
+
+This can be rewritten as
+
+\begin{equation}
+\frac{a*}{b*}=\frac{a + n \bar{x}}{n+b}
+\end{equation}
+
+Dividing both the numerator and denominator by b:
+
+\begin{equation}
+\frac{a*}{b*}=\frac{(a + n \bar{x})/b }{(n+b)/b} = \frac{a/b + n\bar{x}/b}{1+n/b}
+\end{equation}
+
+
+Since $a/b$ is the mean $m$ of the prior, we can rewrite this as:
+
+\begin{equation}
+\frac{a/b + n\bar{x}/b}{1+n/b}= \frac{m + \frac{n}{b}\bar{x}}{1+
+\frac{n}{b}}
+\end{equation}
+
+
+We can rewrite this as:
+
+\begin{equation}
+\frac{m + \frac{n}{b}\bar{x}}
+{1+\frac{n}{b}} = \frac{m\times 1}{1+\frac{n}{b}} + \frac{\frac{n}{b}\bar{x}}{1+\frac{n}{b}}
+\end{equation}
+
+
+This is a weighted average: setting $w_1=1$ and 
+$w_2=\frac{n}{b}$, we can write the above as:
+
+\begin{equation}
+m \frac{w_1}{w_1+w_2} + \bar{x} \frac{w_2}{w_1+w_2}
+\end{equation}
+
+A $n$ approaches infinity, the weight on the prior mean $m$ will tend towards 0, making the posterior mean approach the maximum likelihood estimate of the sample.
+
+This makes sense: as sample size increases, the likelihood will dominate in determining the posterior mean.
+
+Regarding variance, since the variance of the posterior is:
+
+\begin{equation}
+\frac{a*}{b*^2}=\frac{(a + n \bar{x})}{(n+b)^2} 
+\end{equation}
+
+as $n$ approaches infinity, the posterior variance will approach zero, which makes sense: more data will reduce variance (uncertainty). 
+ 
+
+\subsection{Problem 4}
+
+%We solve this problem using the two methods suggested.
+
+
+If we have additional data from two weeks, with a count of 200,
+$\sum x_i= 422+200=622$ and $n=6$ (not 5, because it is two weeks' data).\footnote{One can also demonstrate this by multiplying the likelihood of the five data points; for the two weeks' measurement, the likelihood would be proportional to $\exp(-2\theta)(2\theta)^x$. Given that $n=4$ for the original data,
+this likelihood for the new data has the effect that the likelihood ends up being proportional to 
+$\exp(-\theta(n+2))(\theta)^{\sum x}$.}
+
+Find the new posterior distribution given this new data.
+
+\paragraph{Using all the data together}
+
+This means that the posterior would be a Gamma distribution with parameters:
+$a^{**}=a+\sum_i^{6} x_i=10000/225+622=\Sexpr{round(10000/225+622,digits=2)}$ and $b^{**}=b+6=100/225+6=\Sexpr{round(100/225+6,digits=2)}$.
+In other words, the mean of the posterior is 
+$\Sexpr{round((10000/225+622)/(100/225+6),digits=2)}$ and 
+the variance is
+$\Sexpr{round((10000/225+622)/((100/225+6)^2),digits=2)}$.
+
+
+\paragraph{Verification using JAGS}
+
+<<>>=
+dat2<-list(y=c(115,97,79,131,200))
+
+## model specification:
+cat("
+model
+   {
+for(i in 1:4){
+  y[i] ~ dpois(theta)
+}
+  y[5] ~ dpois(2*theta)
+    
+  ##prior
+  ## gamma params derived from given info:  
+  theta ~ dgamma(10000/225,100/225)
+}",
+    file="poisexercise2.jag" )
+
+## specify variables to track
+## the posterior distribution of:
+track.variables<-c("theta")
+
+## load rjags library:
+library(rjags,quietly=T)
+
+## define model:
+poisex2.mod <- jags.model( 
+    data = dat2,
+    file = "poisexercise2.jag",
+    n.chains = 4,
+    n.adapt =2000 ,quiet=T)
+
+## run model:
+poisex2.res <- coda.samples( poisex2.mod,
+               var = track.variables,
+               n.iter = 100000,
+               thin = 50 ) 
+@
+
+JAGS returns the mean as 
+$\Sexpr{round(summary(poisex2.res)$statistics[1],digits=2)}$, and 
+the variance as 
+$\Sexpr{round(summary(poisex2.res)$statistics[2],digits=2)}$.
+This is quite close to the analytically computed values.
+
+
+\subsection{Using the posterior as our new prior}
+
+The posterior distribution given the old data is $Gamma(a=466.44,b=4.44)$. The new data is a count of $200$ over two weeks, therefore the likelihood is proportional to:
+
+$\exp(-2\theta)(2\theta)^{200}$
+
+Multiplying the prior (the above posterior) with the likelihood, we get:
+
+\begin{equation}
+\begin{split}
+[\theta^{466.44-1}\exp(-4.44\theta)] 
+[\exp(-2\theta)(2\theta)^{200}] =& \theta^{666.44-1}\exp(-4.44\theta-2\theta)\\
+ =&\theta^{666.44-1} \exp(-6.44\theta)
+\end{split}
+\end{equation}
+
+In other words, the posterior is $Gamma(666.44,6.44)$.
+
+This is identical to the posterior we obtained in the previous exercise. This situation will always be true when we have conjugate priors: the result will be the same regardless of whether we take all the data together or successively fit new data, using the posterior of the previous fit as our prior.
+This is because the multiplication of the terms will always give the same result regardless of how they are rearranged.
+
+
+
+
+\subsection{Summary of results for problems 1-4}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{rlllll}
+  \hline
+ & Prior & Lik.\ & Post.\ & Mean & Var \\ 
+  \hline
+Prob.\ 1, 2 & $Ga(\frac{10000}{225},\frac{100}{225})$  & $\exp(-n\theta) \theta^{\sum_i^{n} x_i}$   & $Ga(a+\sum_i^{n} x_i, b+n)$ &  $\frac{a+\sum_i^{n} x_i}{b+n}$ & $\frac{a+\sum_i^{n} x_i}{(b+n)^2}$  \\ 
+Prob.\ 3   & $Ga(\frac{10000}{225},\frac{100}{225})$  & $\exp(-4\theta) \theta^{422}$  & $Ga(\frac{10000}{225} + 422, 4 + \frac{100}{225})$  & 104.95  & 23.61   \\ 
+Prob.\ 4 (method 1)   &   $Ga(\frac{10000}{225},\frac{100}{225})$ &  $\exp(-6\theta) \theta^{622}$ &  $Ga(666.44, 6.44)$ &  103.41  & 16.05 \\ 
+Prob.\ 4 (method 2)    & $Ga(\frac{10000}{225} + 422, 4 + \frac{100}{225})$ & $\exp(-2\theta)(2\theta)^{200}$
+   & Ga(666.44, 6.44)  & 103.41  & 16.05 \\ 
+   \hline
+\end{tabular}
+\end{table}
+
+
+\subsection{Problem 5}
+
+Express the posterior mean as a weighted sum of the prior mean and the maximum likelihood estimate of $\theta$.
+
+The posterior mean is:
+
+\begin{equation}
+\frac{a*}{b*}=\frac{a + \sum x_i }{n+b}
+\end{equation}
+
+This can be rewritten as
+
+\begin{equation}
+\frac{a*}{b*}=\frac{a + n \bar{x}}{n+b}
+\end{equation}
+
+Dividing both the numerator and denominator by b:
+
+\begin{equation}
+\frac{a*}{b*}=\frac{(a + n \bar{x})/b }{(n+b)/b} = \frac{a/b + n\bar{x}/b}{1+n/b}
+\end{equation}
+
+
+Since $a/b$ is the mean $m$ of the prior, we can rewrite this as:
+
+\begin{equation}
+\frac{a/b + n\bar{x}/b}{1+n/b}= \frac{m + \frac{n}{b}\bar{x}}{1+
+\frac{n}{b}}
+\end{equation}
+
+
+We can rewrite this as:
+
+\begin{equation}
+\frac{m + \frac{n}{b}\bar{x}}
+{1+\frac{n}{b}} = \frac{m\times 1}{1+\frac{n}{b}} + \frac{\frac{n}{b}\bar{x}}{1+\frac{n}{b}}
+\end{equation}
+
+
+This is a weighted average: setting $w_1=1$ and 
+$w_2=\frac{n}{b}$, we can write the above as:
+
+\begin{equation}
+m \frac{w_1}{w_1+w_2} + \bar{x} \frac{w_2}{w_1+w_2}
+\end{equation}
+
+A $n$ approaches infinity, the weight on the prior mean $m$ will tend towards 0, making the posterior mean approach the maximum likelihood estimate of the sample.
+
+This makes sense: as sample size increases, the likelihood will dominate in determining the posterior mean.
+
+Regarding variance, since the variance of the posterior is:
+
+\begin{equation}
+\frac{a*}{b*^2}=\frac{(a + n \bar{x})}{(n+b)^2} 
+\end{equation}
+
+as $n$ approaches infinity, the posterior variance will approach zero, which makes sense: more data will reduce variance (uncertainty). 
+

@@ -1,0 +1,1351 @@
+
+\chapter{Gibbs sampling and the Metropolis-Hastings algorithm}
+
+\section{A preview of where we are going}
+
+\textbf{Monte Carlo integration}
+
+It sounds fancy, but basically this amounts to sampling from a distribution, and computing summaries like the mean. Formally, we calculate E(f(X)) by drawing samples $\{X_1,\dots,X_n\}$ and then approximating:
+
+\begin{equation}
+E(f(X))\approx \frac{1}{n}\sum f(X)
+\end{equation}
+
+For example: 
+
+<<>>=
+x<-rnorm(1000,mean=0,sd=1)
+mean(x)
+@
+
+We can increase sample size to as large as we want.
+
+We can also compute quantities like $P(X<1.96)$ by sampling:
+
+<<>>=
+mean((x<1.96))
+## theoretical value:
+pnorm(1.96)
+@
+
+So, we can compute summary statistics using simulation. However, if we only know up to proportionality the form of the distribution to sample from, how do we get these samples to summarize from? Monte Carlo Markov Chain (MCMC) methods provide that capability: they allow you to sample from distributions you only know up to proportionality.
+
+\textbf{Markov chain sampling}
+
+We have been doing non-Markov chain sampling in the introductory course:
+
+<<>>=
+indep.samp<-rnorm(500,mean=0,sd=1)
+head(indep.samp)
+@
+
+The vector of values sampled here are statistically independent. 
+
+<<label=indepsamp>>=
+plot(1:500,indep.samp,type="l")
+@
+
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<indepsamp>>
+@
+\caption{Example of independent samples.}\label{fig:indepsamp}
+\end{marginfigure}
+
+If the current value influences the next one, we have a Markov chain.
+Here is a simple Markov chain: the i-th draw is dependent on the i-1 th draw:
+
+<<markovchainexample>>=
+nsim<-500
+x<-rep(NA,nsim)
+y<-rep(NA,nsim)
+x[1]<-rnorm(1) ## initialize x
+for(i in 2:nsim){
+## draw i-th value based on i-1-th value:  
+y[i]<-rnorm(1,mean=x[i-1],sd=1)
+x[i]<-y[i]
+}
+plot(1:nsim,y,type="l")
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<markovchainexample>>
+@
+\caption{Example of markov chain.}\label{fig:markovchainexample}
+\end{marginfigure}
+
+
+\section{Monte Carlo sampling}
+
+In the example with the beta distribution above, we can sample from the posterior distribution easily:
+
+<<>>=
+x<-rbeta(5000,1498,1519)
+@
+
+Once we have these samples, we can compute any kind of useful summary, e.g., the posterior probability (given the data) that p>0.5:
+
+<<>>=
+table(x>0.5)[2]/ sum(table(x>0.5))
+@
+
+Or we can compute a 95\% interval within which we are 95\% sure that the true parameter value lies (recall all the convoluted discussion about 95\% CIs in the frequentist setting!):
+
+<<>>=
+##lower bound:
+quantile(x,0.025)
+## upper bound:
+quantile(x,0.975)
+@
+
+Since we can integrate the beta distribution analytically, we could have done the same thing with the \texttt{qbeta} function (or simply using calculus):
+
+<<>>=
+(lower<-qbeta(0.025,shape1=1498,shape2=1519))
+(upper<-qbeta(0.975,shape1=1498,shape2=1519))
+@
+
+Using calculus (well, we are still using R; I just mean that one could do this by hand, by solving the integral):
+
+<<>>=
+integrate(function(x) dbeta(x,shape1=1498,shape2=1519),
+          lower=lower,upper=upper)
+@
+
+However---and here we finally get to a crucial point in this course---integration of posterior densities is often impossible (e.g., because they may have many dimensions). In those situations we use sampling methods called Markov Chain Monte Carlo, or MCMC, methods.
+
+As Lunn et al put it (p.\ 61),\cite{lunn2012bugs} the basic idea is going to be that we sample from an approximate distribution, and then correct or adjust the values.
+The rest of this chapter elaborates on this statement.
+
+First, let's look at two relatively simple methods of sampling.
+
+
+\section{The inversion method}
+
+This method works when we can know the closed form of the pdf we want to simulate from and can derive the inverse of that function.
+
+Steps:
+
+
+\begin{enumerate}
+\item Sample one number $u$ from $Unif(0,1)$. Let $u=F(z)=\int_L^z f(x)\, dx $ (here, $L$ is the lower bound of the pdf f).
+\item Then $z=F^{-1}(u)$ is a draw from $f(x)$.
+\end{enumerate}
+
+Example: let $f(x) = \frac{1}{40} (2x + 3)$, with $0<x<5$. We have to draw a number from the uniform distribution and then solve for z, which amounts to finding the inverse function:
+
+\begin{equation}
+u = \int_0^z \frac{1}{40} (2x + 3)
+\end{equation}
+
+<<>>=
+u<-runif(1000,min=0,max=1) 
+
+z<-(1/2) * (-3 + sqrt(160*u +9))
+@
+
+This method can't be used if we can't find the inverse, and it can't be used with multivariate distributions.
+
+\section{The rejection method}
+
+If $F^{-1}(u)$ can't be computed, we sample from $f(x)$ as follows:
+
+\begin{enumerate}
+\item 
+Sample a value $z$ from a distribution $g(z)$ from which sampling is easy, and for which 
+
+\begin{equation}
+m g(z) > f(z) \quad m \hbox{ a constant}
+\end{equation}
+
+$m g(z)$ is called an envelope function because it envelops $f(z)$.
+
+
+\item 
+Compute the ratio
+
+\begin{equation}
+R = \frac{f(z)}{mg(z)}
+\end{equation}
+
+\item Sample $u\sim Unif(0,1)$.
+\item If $R>u$, then $z$ is treated as a draw from $f(x)$. Otherwise return to step 1. 
+\end{enumerate}
+
+
+For example, consider f(x) as above: 
+$f(x) = \frac{1}{40} (2x + 3)$, with $0<x<5$. The maximum height of $f(x)$ is $0.325$ (why?). So we need an envelope function that exceeds $0.325$. The uniform density $Unif(0,5)$ has maximum height 0.2, so if we multiply it by 2 we have maximum height $0.4$, which is greater than $0.325$.
+
+In the first step, we sample a number x from a uniform distribution Unif(0,5). This serves to locate a point on the x-axis between 0 and 5 (the domain of $x$). The next step involves locating a point in the y direction once the x coordinate is fixed. If we draw a number u from Unif(0,1), then 
+$m g(x) u =2*0.2 u$ is a number between $0$ and $2*0.2$.  If this number is less than f(x), that means that the y value falls within f(x), so we accept it, else reject.
+Checking whether $m g(x) u$ is less than $f(x)$ is the same as checking whether 
+
+\begin{equation}
+R=f(x)/mg(z) > u
+\end{equation}
+
+<<>>=
+#R program for rejection method of sampling 
+## From Lynch book, adapted by SV.
+count<-0
+k<-1 
+accepted<-rep(NA,1000) 
+rejected<-rep(NA,1000)
+while(k<1001)
+{
+z<-runif(1,min=0,max=5) 
+r<-((1/40)*(2*z+3))/(2*.2)
+if(r>runif(1,min=0,max=1)) {
+  accepted[k]<-z
+  k<-k+1} else {
+    rejected[k]<-z
+  }
+count<-count+1
+}
+@
+
+<<rejectionsampling>>=
+hist(accepted,freq=F,
+     main="Example of rejection sampling")
+
+fn<-function(x){
+  (1/40)*(2*x+3)
+}
+
+x<-seq(0,5,by=0.01)
+
+lines(x,fn(x))
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<rejectionsampling>>
+@
+\caption{Example of rejection sampling.}\label{fig:rejectionsampling}
+\end{marginfigure}
+
+<<>>=
+## acceptance rate:
+table(is.na(rejected))[2]/
+  sum(table(is.na(rejected)))
+@
+
+Question: If you increase $m$, will acceptance rate increase or decrease? Stop here and come up with an answer before you read further. 
+
+\bigskip
+
+Rejection sampling can be used with multivariate distributions. 
+
+Some limitations of rejection sampling: finding an envelope function may be difficult; the acceptance rate would be low if the constant m is set too high and/or if the envelope function is too high relative to f(x), making the algorithm inefficient.   
+
+\section{Monte Carlo Markov Chain: The Gibbs sampling algorithm}
+
+Let $\Theta$ be a vector of parameter values, let length of $\Theta$ be $k$. Let $j$ index the $j$-th iteration.
+
+Algorithm:
+
+\begin{enumerate}
+\item Assign starting values to $\Theta$:
+
+$\Theta^{j=0} \leftarrow S$
+
+\item 
+Set $j \leftarrow j + 1$
+\item 
+\begin{enumerate}
+\item[1.] Sample $\theta_1^j \mid \theta_2^{j-1}\dots \theta_k^{j-1}$.
+\item[2.] Sample $\theta_2^j \mid \theta_1^{j}\theta_3^{j-1}\dots \theta_k^{j-1}$.
+
+\vdots
+
+\item[k.] Sample $\theta_k^{j} \mid \theta_1^{j}\dots \theta_{k-1}^{j}$.
+\end{enumerate}
+\item
+Return to step 1.
+\end{enumerate}
+
+Example: Consider the bivariate distribution:
+
+\begin{equation}
+f(x,y)= \frac{1}{28}(2x + 3y + 2)
+\end{equation}
+
+We can analytically work out the conditional distributions:
+
+\begin{equation}
+f(x\mid y)=  \frac{f(x,y)}{f(y)}= \frac{(2x + 3y + 2)}{6y+8}
+\end{equation}
+
+\begin{equation}
+f(y\mid x)=  \frac{f(x,y)}{f(x)}= \frac{(2x + 3y + 2)}{4y+10}
+\end{equation}
+
+The Gibbs sampler algorithm is: 
+
+\begin{enumerate}
+\item
+Set starting values for the two parameters $x=-5, y=-5$. Set j=0.
+\item
+Sample $x^{j+1}$ from $f(x\mid y)$ using inversion sampling. You need to work out the inverse of $f(x\mid y)$ and $f(y\mid x)$ first.
+To do this, for $f(x\mid u)$, we have 
+find $z_1$:
+
+\begin{equation}
+u = \int_0^{z_1} \frac{(2x + 3y + 2)}{6y+8}\, dx
+\end{equation}
+
+And for $f(y\mid x)$, we have to find $z_2$:
+
+\begin{equation}
+u = \int_0^{z_2} \frac{(2x + 3y + 2)}{4y+10} \, dy
+\end{equation}
+
+I leave that as an exercise; the solution is given in the code below.
+\end{enumerate}
+
+<<>>=
+#R program for Gibbs sampling using inversion method 
+## program by Scott Lynch, modified by SV:
+x<-rep(NA,2000)
+y<-rep(NA,2000) 
+x[1]<- -5
+y[1]<- -5
+
+for(i in 2:2000)
+{ #sample from x | y 
+  u<-runif(1,min=0, max=1) 
+  x[i]<-sqrt(u*(6*y[i-1]+8)+(1.5*y[i-1]+1)*(1.5*y[i-1]+1))-
+    (1.5*y[i-1]+1) 
+  #sample from y | x
+u<-runif(1,min=0,max=1) 
+y[i]<-sqrt((2*u*(4*x[i]+10))/3 +((2*x[i]+2)/3)*((2*x[i]+2)/3))- 
+    ((2*x[i]+2)/3)
+}
+@
+
+You can run this code to visualize the simulated posterior distribution:
+
+<<posteriorbivariateexample>>=
+bivar.kde<-kde2d(x,y)
+persp(bivar.kde,phi=10,theta=90,shade=0,border=NA,
+      main="Simulated bivariate density using Gibbs sampling")
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<posteriorbivariateexample>>
+@
+\caption{Example of posterior distribution of bivariate distribution} \label{fig:posteriorbivariateexample}
+\end{marginfigure}
+
+A central insight here is that knowledge of the conditional distributions is enough to figure out (simulate from) the joint distribution, provided such a joint distribution exists. 
+
+\section{Gibbs sampling using rejection sampling}
+
+Suppose the conditional distribution is not univariate--we might have conditional multivariate densities. Now we can't use inversion sampling. Another situation where we can't use inversion sampling is when $F^{-1}()$ can't be calculated even in one dimension (An example where the inversion sampling doesn't work is the bivariate normal; there is no way to compute the conditional CDF analytically).
+
+<<>>=
+#R program for Gibbs sampling using rejection sampling 
+## Program by Scott Lynch, modified by SV:
+x<-rep(NA,2000) 
+y<-rep(NA,2000) 
+x[1]<- -1
+y[1]<- -1
+
+
+m<-25
+
+for(i in 2:2000){
+#sample from x | y using rejection sampling 
+  z<-0 
+  while(z==0){ 
+  u<-runif(1,min=0, max=2) 
+  if( ((2*u)+(3*y[i-1])+2) > (m*runif(1,min=0,max=1)*.5))
+    {
+    x[i]<-u 
+    z<-1
+  }
+} 
+  #sample from y | x using z=0 while(z==0)
+ z<-0 
+  while(z==0){ 
+    u<-runif(1,min=0,max=2) 
+  if( ((2*x[i])+(3*u)+2)> (m*runif(1,min=0,max=1)*.5)){
+{y[i]<-u; z<-1}
+}
+  }
+}
+@
+
+Note that we need to know the conditional densities only up to proportionality, we do not need to know the normalizing constant (see discussion in Lynch). Also, note that we need sensible starting values, otherwise the algorithm will never take off.
+
+Visualization:
+
+<<posteriorrejection>>=
+bivar.kde<-kde2d(x,y)
+persp(bivar.kde,phi=10,theta=90,shade=0,border=NA,
+      main="Simulated bivariate density using Gibbs sampling \n
+      (rejection sampling)")
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<posteriorrejection>>
+@
+\caption{Sampling from posterior density, using rejection sampling.}\label{fig:posteriorrejection}
+\end{marginfigure}
+
+\section{More realistic example: Sampling from a bivariate density}
+
+Let's try to sample from a bivariate normal distribution using Gibbs sampling. We could have just done it with a built-in function from the \texttt{MASS} package for this (see earlier material on bivariate distribution sampling using \texttt{mvrnorm} in these notes). But it's instructive to do it ``by hand''.
+
+Here, we can compute the conditional distributions but we can't compute $F^{-1}()$ analytically.
+
+We can look up in a textbook (or derive this analytically) that the conditional distribuion $f(X\mid Y)$ in this case is:
+
+\begin{equation}
+f(X\mid Y) = N(\mu_x+\rho \sigma_x \frac{y-\mu_y}{\sigma_y},\sigma_x\sqrt{(1-\rho^2}))
+\end{equation}
+
+and similarly (mutatis mutandis) for $f(Y\mid X)$. Note that Lynch provides a derivation for conditional densities up to proportionality. 
+
+For simplicity we assume we have a bivariate normal, uncorrelated random variables X and Y each with mean 0 and sd 1. But you can play with all of the parameters below and see how things change.
+
+Here is my code:
+
+<<>>=
+## parameters:
+mu.x<-0
+mu.y<-0
+sd.x<-1
+sd.y<-1
+rho<-0
+
+## Gibbs sampler:
+x<-rep(NA,2000)
+y<-rep(NA,2000) 
+x[1]<- -5
+y[1]<- -5
+
+for(i in 2:2000)
+{ #sample from x | y, using (i-1)th value of y:
+  u<-runif(1,min=0, max=1) 
+  x[i]<- rnorm(1,mu.x+rho*sd.x*((y[i-1] - mu.y)/sd.y),
+               sd.x*sqrt(1-rho^2))
+  
+  #sample from y | x, using i-th value of x
+u<-runif(1,min=0,max=1) 
+y[i]<-rnorm(1,mu.y+rho*sd.y*((x[i] - mu.x)/sd.x),
+            sd.y*sqrt(1-rho^2))
+}
+@
+
+We can visualize this as well:
+
+<<fig=F,eval=F>>=
+bivar.kde<-kde2d(x,y)
+for(i in 1:100){
+persp(bivar.kde,phi=10,theta=i,shade=0,border=NA,
+      main="Simulated bivariate normal density 
+      using Gibbs sampling")
+#Sys.sleep(0.1)
+}
+@
+
+We can plot the ``trace plot'' of each density, as well as the marginal density:
+
+<<traceplot>>=
+op<-par(mfrow=c(2,2),pty="s")
+plot(1:2000,x)
+hist(x,main="Marginal density of X")
+plot(1:2000,y)
+hist(y,main="Marginal density of Y")
+@
+
+\begin{marginfigure}
+<<fig=TRUE,echo=F>>=
+<<traceplot>>
+@
+\caption{Trace plots.}\label{fig:traceplot}
+\end{marginfigure}
+
+The trace plots show the points that were sampled. The initial values ($-5$) were not realistic, and it could be that the first few iterations do not really yield representative samples. We discard these, and the initial period is called ``burn-in''.
+
+The two dimensional trace plot traces the Markov chain walk (I don't plot it because it slows down the loading of the pdf):
+
+<<fig=F,echo=T>>=
+plot(x,y,type="l",col="red")
+@
+
+We can also summarize the marginal distributions. One way is to compute the 95\% highest posterior density interval (now you know why it's called that), and the mean or median.
+
+<<>>=
+quantile(x,0.025)
+quantile(x,0.975)
+mean(x)
+
+quantile(y,0.025)
+quantile(y,0.975)
+mean(y)
+@
+
+These numbers match up pretty well with the theoretical values (which we know since we sampled from a bivariate with known means and sds; see above).
+
+If we discard the first 500 runs as burn-in, we get:
+
+<<>>=
+quantile(x[501:2000],0.025)
+quantile(x[501:2000],0.975)
+mean(x[501:2000])
+
+quantile(y[501:2000],0.025)
+quantile(y[501:2000],0.975)
+mean(y[501:2000])
+@
+
+%And here is Scott Lynch's code, with conditional distributions specified up to proportionality:
+
+<<echo=F>>=
+#R program for Gibbs sampling from a bivariate normal pdf 
+x<-rep(NA,2000)
+y<-rep(NA,2000) 
+for(j in 2:2000)
+{
+#sampling from x|y 
+  x[j]=rnorm(1,mean=(.5*y[j-1]),sd=sqrt(1-.5*.5)) 
+  #sampling from y|x 
+  y[j]=rnorm(1,mean=(.5*x[j]),sd=sqrt(1-.5*.5))
+}
+@
+
+\section{Sampling the parameters given the data}
+
+The Bayesian approach is that, conditional on having data, we want to sample parameters. For this, we need to figure out the conditional density of the parameters given the data.
+
+The marginal for $\sigma^2$ happens to be:
+
+
+\begin{equation}
+p(\sigma^2 \mid X) \propto InverseGamma((n-1)/2,(n-1)var(x)/2)
+\end{equation}
+
+The conditional distribution:
+
+\begin{equation}
+p(\sigma^2 \mid\mu, X) \propto InverseGamma(n/2,\sum (x_i - \mu)^2/2)
+\end{equation}
+ 
+
+\begin{equation}
+p(\mu \mid \sigma^2, \mid X) \propto N(\bar{x},\sigma^2/n)
+\end{equation}
+
+Now we can do Gibbs sampling on parameters given data.
+There are two ways, given the above equations:
+
+\begin{enumerate}
+\item Given the marginal distribution of $\sigma^2$, sample a vector of values for $\sigma^2$ and then sample $\mu$ conditional on each value of $\sigma^2$ from $\mu$'s conditional distribution.
+\textbf{This approach is more efficient}.
+\item First sample a value for $\sigma^2$ conditional on $\mu$, then sample a value of $\mu$ conditional on the new value for $\sigma^2$, etc.
+\end{enumerate}
+
+\paragraph{Example of first approach}
+
+<<>>=
+#R: sampling from marginal for variance and conditional for mean 
+## code by Scott Lynch, slightly modified by SV:
+x<-as.matrix(read.table("ScottLynchData/education.dat",
+                        header=F)[,1])
+sig2<-rgamma(2000,(length(x)-1)/2 , 
+             rate=((length(x)-1)*var(x)/2))
+sig2<-1/sig2
+mu<-rnorm(2000,mean=mean(x),
+          sd=(sqrt(sig2/length(x))))
+@
+
+Note that we draw from a gamma, and then invert to get an inverse gamma.
+
+Visualization:
+
+<<marginalsapproach>>=
+bivar.kde<-kde2d(sig2,mu)
+persp(bivar.kde,phi=10,theta=90,shade=0,
+      border=NA,
+      main="Simulated bivariate density using 
+      Gibbs sampling\n 
+      first approach (using marginals)")
+@
+
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<marginalsapproach>>
+@
+\caption{Gibbs sampling using marginals.}\label{fig:marginalsapproach}
+\end{marginfigure}
+
+<<marginalsapproach2>>=
+op<-par(mfrow=c(1,2),pty="s")
+hist(mu)
+hist(sig2)
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<marginalsapproach2>>
+@
+\caption{Marginal posterior distributions for $\mu$ and $\sigma^2$.}\label{fig:marginalsapproach2}
+\end{marginfigure}
+
+\paragraph{Example of second approach}
+
+Here, we sample $\mu$ and $\sigma^2$ sequentially from their conditional distributions.
+
+<<>>=
+#R: sampling from conditionals for both variance and mean
+x<-as.matrix(read.table("ScottLynchData/education.dat",
+                        header=F)[,1]) 
+mu<-rep(0,2000)
+sig2<-rep(1,2000) 
+for(i in 2:2000){ 
+  sig2[i]<-rgamma(1,(length(x)/2),
+                  rate=sum((x-mu[i-1])^2)/2) 
+  sig2[i]<-1/sig2[i] 
+  mu[i]<-rnorm(1,mean=mean(x),
+               sd=sqrt(sig2[i]/length(x)))
+}
+@
+
+First, we drop the burn-in values (in the conditionals sampling approach, the initial values will need to be dropped).
+
+
+<<>>=
+mu<-mu[1001:2000]
+sig2<-sig2[1001:2000]
+@
+
+Visualization:
+
+<<posteriorconditionals>>=
+bivar.kde<-kde2d(sig2,mu)
+persp(bivar.kde,phi=10,theta=45,shade=0,border=NA,
+      main="Simulated bivariate density using 
+      Gibbs sampling\n 
+      second approach (using conditionals)")
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<posteriorconditionals>>
+@
+\caption{Posterior distribution using conditionals.}\label{fig:posteriorconditionals}
+\end{marginfigure}
+
+\section{Summary of the story so far}
+
+This summary is taken, essentially verbatim but reworded a bit, from Lynch\cite{lynch2007introduction} (pages 103-104).
+
+\begin{enumerate}
+\item Our main goal in the Bayesian approach is to summarize the posterior density. 
+\item If the posterior density can be analytically analyzed using integration, we are done.
+\item If there are no closed-form solutions to the integrals, we resort to sampling from the posterior density. This is where Gibbs sampling comes in: the steps are:
+\begin{enumerate}
+\item Derive the relevant conditional densities: this involves (a) treating other variables as fixed (b) determining how to sample from the resulting conditional density. The conditional density either has a known form (e.g., normal) or it may take an unknown form. If it has an unknown form, we use inversion or rejection sampling in order to take samples from the conditional densities.
+\item If inversion sampling from a conditional density is difficult or impossible, we use the \textbf{Metropolis-Hastings algorithm}, which we discuss next.
+\end{enumerate}
+\end{enumerate}
+
+
+
+
+
+\section{Metropolis-Hastings sampling}
+
+I got this neat informal presentation of the idea from 
+
+http://www.faculty.biol.ttu.edu/strauss/bayes/LectureNotes/09\_MetropolisAlgorithm.pdf
+
+Quoted almost verbatim (slightly edited):
+
+\begin{enumerate}
+\item Imagine a politician visiting six islands:
+
+\begin{enumerate}
+\item Wants to visit each island a number of times proportional to its 
+population.
+\item Doesn't know how many islands there are.
+\item Each day: might move to a new neighboring island, or stay on current 
+island.
+\end{enumerate}
+
+\item Develops simple heuristic to decide which way to move: 
+
+\begin{enumerate}
+\item
+Flips a fair coin to decide whether to move to east or west.
+\item
+If the proposed island has a larger population than the current island, 
+moves there.
+\item
+If the proposed island has a \textit{smaller} population than the current island, 
+moves there probabilistically, based on uniform distribution.
+
+Probability of moving depends on relative population sizes:
+
+\begin{equation}
+p_{move}=\frac{p_{proposed}}{p_{current}}
+\end{equation}
+\end{enumerate}
+\item End result: probability that politician is on any one of the islands exactly matches the relative proportions of people on the island. We say that the probability distribution \textbf{converges} to a particular distribution.
+\end{enumerate}
+
+
+
+
+\paragraph{Illustration of convergence using a discrete Markov chains}
+
+[Adapted slightly from Jim Albert's book\cite{albert2009bayesian}.] 
+
+The  above politician example can be made concrete as follows in terms of a Markov chain.
+A Markov chain defines probabilistic movement from one state to the next. Suppose we have 6 states; a \textbf{transition matrix} can define the probabilities:
+
+<<>>=
+## Set up transition matrix:
+T<-matrix(rep(0,36),nrow=6)
+diag(T)<-0.5
+offdiags<-c(rep(0.25,4),0.5)
+for(i in 2:6){
+T[i,i-1]<-offdiags[i-1]
+}
+offdiags2<-c(0.5,rep(0.25,4))
+for(i in 1:5){
+T[i,i+1]<-offdiags2[i]
+}
+T
+@
+
+Note that the rows sum to 1, i.e., the probability mass is distributed over all possible transitions from any one location:
+
+<<>>=
+rowSums(T)
+@
+
+We can represent a current location as a probability vector: e.g., in state one, the transition probabilities for possible moves are:
+
+<<>>=
+T[1,]
+@
+
+We can also simulate a random walk based on T:
+
+<<randomwalk>>=
+nsim<-500
+s<-rep(0,nsim)
+## initialize:
+s[1]<-3
+for(i in 2:nsim){
+  s[i]<-sample(1:6,size=1,prob=T[s[i-1],])
+}
+
+plot(1:nsim,s,type="l")
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<randomwalk>>
+@
+\caption{A random walk with a discrete markov chain.}\label{fig:randomwalk}
+\end{marginfigure}
+Note that the above random walk is non-deterministic: if we rerun the above code multiple times, we will get different patterns of movement.
+
+This Markov chain converges to a particular distribution of probabilities of visiting states 1 to 6. We can see the convergence happen by examining the proportions of visits to each state after blocks of steps that increase by 500 steps:
+
+<<convergence>>=
+nsim<-50000
+s<-rep(0,nsim)
+## initialize:
+s[1]<-3
+for(i in 2:nsim){
+  s[i]<-sample(1:6,size=1,prob=T[s[i-1],])
+}
+
+
+blocks<-seq(500,50000,by=500)
+n<-length(blocks)
+## store transition probs over increasing blocks:
+store.probs<-matrix(rep(rep(0,6),n),ncol=6)
+## compute relative frequencies over increasing blocks:
+for(i in 1:n){
+  store.probs[i,]<-table(s[1:blocks[i]])/blocks[i]
+}
+
+## convergence for state 1:
+for(j in 1:6){
+if(j==1){  
+plot(1:n,store.probs[,j],type="l",lty=j,xlab="block",
+     ylab="probability")
+} else {
+  lines(1:n,store.probs[,j],type="l",lty=j)
+}
+}
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<convergence>>
+@
+\caption{Convergence in the discrete markov chain example.}\label{fig:convergence}
+\end{marginfigure}
+
+Note that each of the rows of the store.probs matrix is a probability mass function, which defines the probability distribution for the 6 states:
+
+<<>>=
+store.probs[1,]
+@
+
+This distribution is settling down to a particular set of values; that's what we mean by convergence. This particular set of values is:
+
+<<>>=
+(w<-store.probs[n,])
+@
+
+w is called a \textbf{stationary} distribution. 
+If $wT=w$, then 
+then $w$ is the stationary distribution of the Markov chain. 
+
+<<>>=
+round(w%*%T,digits=2)
+round(w,digits=2)
+@
+
+This discrete example gives us an intuition for what will happen in continuous distributions: we will devise a Markov chain such that the chain will converge to the distribution we are interested in sampling from.
+
+
+
+\paragraph{More formal presentation of Metropolis-Hastings}
+
+One key point here is that in MH, we need only specify the unnormalized joint density for the parameters, we don't need the conditional densities.  One price to be paid is greater computational overhead.
+
+As Lynch\cite{lynch2007introduction} (page 108) puts it:
+
+\begin{quote}
+``A key advantage to the MH algorithm over other methods of sampling, like inversion and rejection sampling, is that it will work with multivariate distributions (unlike inversion sampling), and we do not need an enveloping function (as in rejection sampling).''
+\end{quote}
+
+%[Note that it is a rare situation that we cannot derive the conditional density, because the conditional density is proportional to the joint density.]
+
+The algorithm (taken almost verbatim from Lynch):
+
+\begin{enumerate}
+\item
+Establish starting values S for the parameter: $\theta^{j=0}= S$, using MLE or some other method (apparently the starting values don't matter---the distribution to which the Markov chain converges will be the posterior distribution of interest---but poor starting values will affect speed of convergence). 
+Set 
+$j=1$.
+\item
+Draw a ``candidate'' parameter, $\theta^c$ from a ``proposal density,'' 
+$\alpha(\cdot)$. 
+
+
+\item Compute the ratio:
+
+
+\begin{equation}
+R =  \frac{f(\theta^c)}{f(\theta^{j-1})} 
+      \frac{\alpha(\theta^{j-1}\mid \theta^c)}{\alpha (\theta^c\mid \theta^{j-1})} 
+\end{equation}
+
+%[\textbf{The equation above will be explained in detail presently. At the outset we just try to understand the specification of the algorithm.}]
+
+
+The first part of the ratio ($\frac{f(\theta^c)}{f(\theta^{j-1})} $) is called the \textbf{importance ratio}: the ratio of the unnormalized posterior density evaluated at the candidate parameter value ($\theta^c$) to the posterior density evaluated at the previous parameter value ($\theta^{j-1}$).
+
+The second part of the ratio is the ratio of the \textbf{proposal} densities evaluated at the candidate and previous points. This ratio adjusts for the fact that some candidate values may be selected more often than others.
+
+\item 
+Compare R with a $Unif(0,1)$ random draw $u$. If $R > u$, then set $\theta^j = \theta^c$.
+Otherwise, set $\theta^j = \theta^{j-1}$. 
+
+An equivalent way of saying this: set an \textbf{acceptance probability} $aprob$ as follows:
+
+\begin{equation}
+aprob = min(1,R)
+\end{equation}
+
+Then sample  a value $u$ from a uniform $u \sim Unif(0,1)$. 
+
+If $u< aprob$, then accept candidate, else stay with current value ($x_{i-1}$).
+What this means is that if aprob is larger than 1, then we accept the candidate, and if it is less than 1, then we accept the candidate with probability $aprob$.
+
+%\textbf{This is reminiscent of the logic of rejection sampling.}
+
+\item
+Set $j = j+1$ and return to step 2 until enough draws are obtained.
+\end{enumerate}
+
+Step 2 is like drawing from an envelope function in rejection sampling, except that the proposal density (which is any density that it's easy to sample from) does not have to envelope the density of interest. 
+As in rejection sampling, we have to check whether the draw of a parameter value from this proposal density can be considered to be from the density of interest.
+For example, a candidate value could be drawn from a normal distribution $\theta^c = \theta^{j-1}+N(0,c)$, where $c$ is a constant. This gives us a ``random walk Metropolis algorithm''. 
+
+We can quickly implement such a random walk to get a feel for it. This is one of the things the MH algorithm will be doing.
+
+<<randomwalkMH>>=
+## implementation of random walk Metropolis:
+theta.init<-5
+values<-rep(NA,1000)
+values[1]<-theta.init
+for(i in 2:1000){
+  values[i]<-values[i-1]+rnorm(1,mean=0,sd=1)
+}
+
+plot(1:1000,values,type="l",main="Random walk")
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<randomwalkMH>>
+@
+\caption{The random walk in the random walk Metropolis algorithm.}\label{fig:randomwalkMH}
+\end{marginfigure}
+
+And here is an example of a draw from a proposal density: Suppose that at the $(j-1)$-th step, we have the value $\theta^{j-1}$ (in the very first step, when j=2, we will be using the starting value of $\theta$). Suppose that our proposal density is a normal. Our candidate draw will then be made using $\theta^{j-1}$: $\theta^c = \theta^{j-1}+N(0,c)$, $c$ some constant. 
+Suppose $\theta^{j-1}=5$, and $c=1$.
+We can draw a candidate value $\theta^c$ as follows:
+
+<<>>=
+(theta.c<-5 + rnorm(1,mean=0,sd=1))
+@
+
+This is now our $\theta^c$. 
+
+For Step 3 in the algorithm, 
+we can now calculate:
+
+\begin{equation}
+\alpha (\theta^c\mid \theta^{j-1})
+\end{equation}
+
+\noindent
+as follows:
+
+<<>>=
+(p1<-dnorm(theta.c,mean=5,sd=1))
+@
+
+Here is a visualization of what the above call does: given the candidate $\theta^c$, we are computing the probability of transitioning to it (the probability of it being the next position moved to on the x-axis) given a normal distribution with mean 5, which is our starting value for x (sd of the normal distribution is 1, for simplicity).
+
+<<mhvis1>>=
+plot(function(x) dnorm(x,mean=5), 0, 10,
+    ylim=c(0,0.6),
+    ylab="density",xlab="X")
+points(theta.c,p1,pch=16,col="red")
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<mhvis1>>
+@
+\caption{Illustration of calculation of $\alpha(\theta^c\mid x)$.}\label{fig:mhvis1}
+\end{marginfigure}
+
+We can also calculate
+
+\begin{equation}
+\alpha(\theta^{j-1}\mid \theta^c)
+\end{equation}
+
+\noindent
+as follows:
+
+<<>>=
+(p2<-dnorm(5,mean=theta.c,sd=1))
+@
+
+Let's visualize what is being computed here.  First I re-plot the above visualization for comparison.
+
+<<mhvis2>>=
+op<-par(mfrow=c(1,2),pty="s")
+plot(function(x) dnorm(x,mean=5), 0, 10,
+    ylim=c(0,0.6),
+    ylab="density",xlab="X",main="alpha(theta.c|x)")
+points(theta.c,p1,pch=16,col="red")
+
+plot(function(x) dnorm(x,mean=theta.c), 0, 10,
+    ylim=c(0,0.6),
+    ylab="density",xlab="X",new=F,lty=2,,main="alpha(x|theta.c)")
+points(5,p2,pch=16,col="black")
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<mhvis2>>
+@
+\caption{Illustration of calculation of $\alpha(x\mid \theta^c)$.}\label{fig:mhvis2}
+\end{marginfigure}
+
+These two calculations allows us to compute the ratio $\frac{\alpha(\theta^{j-1}\mid \theta^c)}{\alpha (\theta^c\mid \theta^{j-1})}$ (which will turn up in the next step):
+
+<<>>=
+p2/p1
+@
+
+Note that the ratio is 1. If you look at the figure above, you will see that for symmetric distributions (here, the normal distribution) this ratio will \textbf{always} be 1. In other words, for symmetric proposal distributions, we can ignore the second term in the calculation of R and focus only on the importance ratio (see above).
+
+What does it mean for the p2/p1 ratio to be 1? It means is that the probability of transitioning to $\theta^{j-1}$ when sampling from $N(\theta^c, 1)$ is the same as the probability of transitioning to $\theta^c$ when sampling from $N(\theta^{j-1}, 1)$. (Variance is set at 1 just for illustration; one could choose a different value.) 
+
+The ratio p2/p1 becomes relevant for asymmetric proposal densities.
+Lynch writes:
+``This ratio adjusts for the fact that, with asymmetric proposals, some candidate values may be selected more often than others\dots'' In such situations p1 would be larger than p2, and so p2/p1 will be smaller than 1. Adding this term to the calculation of R down-adjusts the value of R. 
+
+Let's try to visualize this. What we see below is that the probability of transitioning to the candidate is higher given x (LHS plot) than the probability of transitioning to x given the candidate (RHS).
+
+<<asymmetry>>=
+op<-par(mfrow=c(1,2),pty="s")
+plot(function(x) dgamma(x,shape=5), 0, 10,
+    #ylim=c(0,0.6),
+    ylab="density",xlab="X",main="alpha(theta.c|x)")
+p1<-dgamma(theta.c,shape=5)
+points(theta.c,p1,pch=16,col="red")
+
+plot(function(x) dgamma(x,shape=theta.c), 0, 10,
+    #ylim=c(0,0.6),
+    ylab="density",xlab="X",
+     lty=2,,main="alpha(x|theta.c)")
+p2<-dgamma(5,shape=theta.c)
+points(5,p2,pch=16,col="black")
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<asymmetry>>
+@
+\caption{The effect of asymmetry in the MH algorithm.}\label{fig:asymmetry}
+\end{marginfigure}
+
+This asymmetry is what the second term in the ratio R corrects for.
+
+When the second term is needed (when it's 1 because we have a symmetric proposal), we have the Metropolis algorithm. When the second term is needed, we have the Metropolis-Hastings algorithm. 
+
+\section{Implementing and visualizing the MH algorithm}
+
+Here is a simple implementation of a Metropolis algorithm, which involves such a symmetric situation:
+%(without the adjustment for asymmetry, see above):
+
+<<>>=
+## source: 
+##http://www.mas.ncl.ac.uk/~ndjw1/teaching/sim/metrop/metrop.html
+## slightly adapted by SV:
+#n is num. of simulations
+norm<-function (n) 
+{
+        vec <- vector("numeric", n)
+        x <- 0
+        vec[1] <- x
+        for (i in 2:n) {
+                can <- x + rnorm(1,mean=0,sd=1)
+                ## to-do need to anticipate this in notes:
+                aprob <- min(1, dnorm(can)/dnorm(x))
+                u <- runif(1)
+                if (u < aprob){ 
+                        x <- can
+                }
+                vec[i] <- x
+        }
+        vec
+}
+@
+
+<<symmetricdemo>>=
+normvec<-norm(5000)
+op<-par(mfrow=c(2,1))
+plot(ts(normvec))
+hist(normvec,30,freq=F)
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<symmetricdemo>>
+@
+\caption{A demonstration of the Metropolis algorithm.}\label{fig:symmetricdemo}
+\end{marginfigure}
+<<>>=
+## we get the correct posterior distribution:
+mean(normvec)
+sd(normvec)
+@
+
+\paragraph{Visualization of the unfolding move-no move decisions} 
+
+I do this in two ways. One shows how the choice between the candidate and the current x is resolved, and the other shows the end result of the algorithm's run.
+
+I first set up a function to create transparent colors (there is probably a better way than this, need to look into that):
+
+<<>>=
+## I got this from the internet somewhere:
+addTrans <- function(color,trans)
+{
+  # This function adds transparency to a color.
+  # Define transparency with an integer between 0 and 255
+  # 0 being fully transperant and 255 being fully visible
+  # Works with either color and trans a vector of equal length,
+  # or one of the two of length 1.
+
+  if (length(color)!=length(trans)&!any(c(length(color),
+                                          length(trans))==1)) 
+    stop("Vector lengths not correct")
+  if (length(color)==1 & length(trans)>1) color <- 
+    rep(color,length(trans))
+  if (length(trans)==1 & length(color)>1) trans <- 
+    rep(trans,length(color))
+
+  num2hex <- function(x)
+  {
+    hex <- unlist(strsplit("0123456789ABCDEF",split=""))
+    return(paste(hex[(x-x%%16)/16+1],hex[x%%16+1],sep=""))
+  }
+  rgb <- rbind(col2rgb(color),trans)
+  res <- paste("#",apply(apply(rgb,2,num2hex),2,
+                         paste,collapse=""),sep="")
+  return(res)
+}
+@
+
+
+First, the incremental presentation, with 100 steps:
+
+<<>>=
+n<-100
+norm<-function (n,display="candidate") 
+{
+        vec <- vector("numeric", n)
+        x <- 0
+        vec[1] <- x
+        plot(function(x) dnorm(x), -10, 10,
+        ylim=c(0,0.6),
+        ylab="density",xlab="X")
+        for (i in 2:n) {
+               if(display=="x"){
+                points(x,jitter(0),pch=16,
+                       col=addTrans("black",100),cex=1.3)}
+                can <- x + rnorm(1,mean=0,sd=1)
+                aprob <- min(1, dnorm(can)/dnorm(x))
+                u <- runif(1)
+                if (u < aprob){ 
+                        x <- can
+                }
+                vec[i] <- x
+               if(display=="candidate"){
+                points(can,jitter(0),pch=16,
+                       col=addTrans("red",100),cex=1.3)}
+#                Sys.sleep(1)
+               if(display=="choice"){
+                points(vec[i],jitter(0),pch=16,
+                       col=addTrans("green",100),cex=2)}
+                Sys.sleep(0.5)
+        }
+        vec
+}
+
+#op<-par(mfrow=c(1,3),pty="s")
+normvec<-norm(n=100,display="candidate")
+normvec<-norm(n=100,display="x")
+normvec<-norm(n=100,display="choice")
+@
+
+
+The red dots are the candidates, the black the X's, and the green ones are ones are the choices adopted at each step. 
+%The histogram shows the distribution of the points transitioned to. 
+
+The next visualization shows the end result of the algorithm run:
+
+<<>>=
+n<- 500
+can.store<-rep(NA,n)
+x.store<-rep(NA,n)
+norm<-function (n) 
+{
+        vec <- vector("numeric", n)
+        x <- 0
+        vec[1] <- x
+        for (i in 2:n) {
+                can <- x + rnorm(1,mean=0,sd=1)
+                can.store[i]<-can
+                x.store[i]<-x
+                aprob <- min(1, dnorm(can)/dnorm(x))
+                u <- runif(1)
+                if (u < aprob){ 
+                        x <- can
+                }
+                vec[i] <- x
+        }
+        list(vec,can.store,x.store)
+}
+@
+
+<<>>=
+normvec<-norm(n)
+
+## recover history of candidates and x's:
+## discard first half:
+start<-n/2
+can.store<-normvec[2][[1]][start:n]
+x.store<-normvec[3][[1]][start:n]
+
+plot(function(x) dnorm(x), -10, 10,
+                  ylim=c(0,0.6),
+                  ylab="density",xlab="X")
+#ys<-seq(0,.4,by=0.4/(n/2))
+points(can.store,jitter(rep(0,length(can.store))),cex=1,pch=16,
+       col=addTrans(rep("red",length(can.store)),10))
+points(x.store,jitter(rep(0.05,length(x.store))),cex=1,pch=16,
+       col=addTrans(rep("black",length(can.store)),10))
+#Sys.sleep(2)
+#                plot(function(x) dnorm(x,mean=can), -10, 10,
+#                  ylim=c(0,1),
+#                  ylab="density",xlab="X",add=T,col="red")
+cand.prob<-dnorm(can.store)
+x.prob<-dnorm(x.store)
+## cases where the candidate is chosen:
+move<-runif(1)<cand.prob/x.prob
+## at which steps did we take the candidates or stayed at x:
+indices<-c(which(move),which(!move))
+## erase earlier candidates:
+#points(can.store,ys,cex=2,pch=16,col="white")
+#points(x.store,ys,cex=2,pch=16,col="white")
+
+## redraw target dist:
+#plot(function(x) dnorm(x), -10, 10,
+#                  ylim=c(0,0.6),
+#                  ylab="density",xlab="X")
+
+
+move.history<-data.frame(indices=indices,
+              points=c(can.store[which(move)],
+                       x.store[which(!move)]))
+
+## reordered to reflect history:
+move.history<-move.history[order(move.history[1,])]
+
+points(move.history$points,
+       jitter(rep(0.1,length(move.history$points))),
+       pch=16,
+       col=addTrans(rep("green",
+                        length(move.history$points)),10),
+       cex=1.5)
+
+#legend(5,.6,pch=16,col=c("red","black"),
+#       legend=c(paste("candidate",round(cand.prob,digits=2)),
+#                paste("previous",round(x.prob,digits=2))))
+            
+hist(move.history$points,freq=FALSE,add=T,
+     col=addTrans(rep("green",length(move.history$points)),10))
+@
+
+
+When we have an asymmetry, we use the Metropolis-Hastings algorithm:
+
+<<>>=
+## source: http://www.mas.ncl.ac.uk/~ndjw1/teaching/sim/metrop/indep.r
+# metropolis-hastings independence sampler for a
+# gamma based on normal candidates with the same mean and variance
+
+gamm<-function (n, a, b) 
+{
+mu <- a/b
+sig <- sqrt(a/(b * b))
+vec <- vector("numeric", n)
+x <- a/b
+vec[1] <- x
+for (i in 2:n) {
+    can <- rnorm(1, mu, sig)
+    importance.ratio<-(dgamma(can, a, b)/dgamma(x,a, b))
+    adjustment<-(dnorm(can, mu, sig)/dnorm(x,mu,sig))
+    aprob <- min(1,importance.ratio/adjustment)
+    u <- runif(1)
+    if (u < aprob) 
+    x <- can
+    vec[i] <- x
+}
+vec
+}
+
+vec<-gamm(10000,2.3,2.7)
+op<-par(mfrow=c(2,1))
+plot(ts(vec))
+hist(vec,30)
+# end
+vec.orig<-vec
+@
+
+We can see why we need the adjustment in the ratio R by simply removing it. Without the adjustment we get a mis-characterization of the posterior distribution of interest.
+
+<<>>=
+gamm<-function (n, a, b) 
+{
+mu <- a/b
+sig <- sqrt(a/(b * b))
+vec <- vector("numeric", n)
+x <- a/b
+vec[1] <- x
+for (i in 2:n) {
+    can <- rnorm(1, mu, sig)
+    importance.ratio<-(dgamma(can, a, b)/dgamma(x,a, b))
+    adjustment<-(dnorm(can, mu, sig)/dnorm(x,mu,sig))
+    #aprob <- min(1,importance.ratio/adjustment)
+    aprob <- min(1,importance.ratio)
+    u <- runif(1)
+    if (u < aprob) 
+    x <- can
+    vec[i] <- x
+}
+vec
+}
+
+vec<-gamm(10000,2.3,2.7)
+@
+
+<<ignoringasymmetry>>=
+hist(vec,30,col=addTrans(rep("blue",length(vec)),10),freq=F)
+hist(vec.orig,30,col=addTrans(rep("red",length(vec.orig)),10),
+     freq=F,add=T)
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<ignoringasymmetry>>
+@
+\caption{The effect of ignoring asymmetry on the posterior distribution.}\label{fig:ignoringasymmetry}
+\end{marginfigure}
+
+Note that we have not explained why the Metropolis-Hastings algorithm works. A full explanation apparently requires Markov chain theory, but an intuitive explanation is that once a sample from the target distribution has been obtained, all subsequent samples will be from the target distribution. There are more details in Gilks et al.\cite{gilks1996markov}
+
+
+
+%\section{Relationship between Gibbs sampling and MH}
+
+%Gibbs sampling is a special case of MH.
+%The two can be combined (Gibbs within MH, and MH within Gibbs).
+%Two important properties of MH (quoted verbatim from Lynch):
+
+%\begin{enumerate}
+%\item ``the candidate parameter is not automatically accepted, because it comes from a proposal density and not from the appropriate conditional distribution'' 
+%\item
+%``Second, the proposal density is not an enveloping function as in the rejection sampling routine.''
+%\end{enumerate}
+
+%All Gibbs sampling is MH, but not all MH is Gibbs.
+
+%Lynch presents random walk algorithms in his book using symmetric proposals.
+
+\section{Assessing convergence: Fat hairy caterpillars}
+
+Visually, you can assess convergence by looking at the chain to see if it looks like a ``fat hairy caterpillar'' (This is how Lunn et al.\ describe it.)
+
+If you use multiple chains with different starting values, and pool all the chains to assess convergence, you will generally get convergence (at least in the models we consider in this course). In our linear mixed models (coming up) we use 3 or 4 chains. The downside of running multiple chains is computational overhead. However, for regular psycholinguistic data this is not going to be a major problem. (It will probably be a major problem for ERP data; but we'll  just throw computational power at the problem by simply using a more powerful computing environment than a laptop).
+
+The Gelman-Rubin (or Brooks-Gelman-Rubin) diagnostic involves sampling from multiple chains with ``overdispersed'' original values, and then comparing between and within group variability.\cite{gelman1992inference} Within variance is represented by the mean width of the 95\% posterior Credible Intervals (CrI) of all chains, from the final T iterations.  Within variance is represented by the width of the 95\% CrI using all chains pooled together (for the T iterations). If the ratio $\hat{R}=B/W$ is approximately 1, we have convergence. Alternatively, you can run the model on incrementally increasing blocks of iterations $T_i$, e.g., $T_1=1000, T_2=2000$, etc., and assess the emergence of convergence. 
+
+\section{Other sampling methods}
+
+There are other methods of sampling available than the ones presented above. Examples are slice sampling and adaptive rejection sampling. But for our purposes we only need to know how the Gibbs and MH algorithms work, and that too only \textit{in principle}; we will never need to implement them for data analysis (I guess I should have mentioned this earlier). JAGS and Stan will do the sampling for us once we define the model.

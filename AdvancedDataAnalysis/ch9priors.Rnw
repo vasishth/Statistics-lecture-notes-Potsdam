@@ -1,0 +1,494 @@
+
+
+\chapter{Priors}
+
+We will use either non-informative (diffuse) or informative priors; details coming in the next chapters when we look at psycholinguistic data. In linear mixed models we will use diffuse priors for the fixed effects (which is what we are interested in), but ``fairly informative priors'' (following Lunn et al, Section 5.1) for random effects.
+Lunn et al say:
+
+\begin{quote}
+Often there is limited evidence in the immediate data concerning such parameters and hence there can be considerable sensitivity to the prior distribution, in which case we recommend thinking carefully about reasonable values in advance and so specifying fairly informative priors---the inclusion of such external information is unlikely to bias the main estimates arising from a study, although it may have some influence on the precision of the estimates and this needs to be careully explored through sensitivity analysis.
+\end{quote}
+
+One rule of thumb seems to be: If you have very little data you probably should not try to use a vague/diffuse prior. When you have little data, your prior is going to dominate the posterior, so you need prior knowledge or expert opinion. By contrast, if you have lots of data, your data will dominate, and the posterior is not going to be too sensitive to the specification of the prior (we will test this later; but I think it's generally true). 
+
+\section{Example illustrating how increasing sample size reduces the impact of the prior}
+
+This is an exercise for you. We return to an earlier example (p.\ \pageref{exampleposteriorpredictive}). Try to obtain the posterior distribution using the following different priors. Summarize the posterior distributions in a way that that the effect of the prior is easy to see; this could be a table or (a set of) figures.
+
+\begin{enumerate}
+\item $\theta \sim Beta(3,27)$ (this is already given below)
+\item $\theta \sim Unif(0,1)$
+\item $\theta \sim Beta (0,0)$
+\item The so-called Jeffreys prior: $\theta \sim Beta (0.5,0.5)$
+\item A logit-normal prior (it's an exercise to figure out how to do this; a hint is that we have seen it before)
+\end{enumerate}
+
+<<>>=
+## the data:
+data<-list(a=3,b=27,y=0,n=10,n.pred=20)
+
+cat("
+model
+   {
+    ## prior
+    theta ~ dbeta(a,b)
+
+    ## likelihood
+    y ~ dbin(theta,n)
+    ## predicted posterior distribution
+    y.pred ~ dbin(theta,n.pred)
+   }",
+     file="JAGSmodels/predictionexample1.jag" )
+
+
+track.variables<-c("y.pred","theta")
+library(rjags)
+
+system.time(
+predeg.mod <- jags.model( 
+  file = "JAGSmodels/predictionexample1.jag",
+                     data=data,
+                     n.chains = 4,
+                      n.adapt =2000 )
+            )
+
+system.time(
+predeg.res <- coda.samples( predeg.mod,
+                            var = track.variables,
+                            n.iter = 10000,
+                            thin = 20 ) )
+@
+
+
+<<echo=F,label=solutionpriors>>=
+cat("
+model
+   {
+    ## prior
+    ## prior 1:
+    theta ~ dbeta(a,b)
+    ## prior 2:
+    ##theta ~ unif(0,1)
+    ## prior 3:
+    ##theta ~ dbeta(0,0)
+    ## prior 4:
+    ##theta ~ dbeta(0.5,0.5)
+    ## prior 5:
+    logit(theta) <- logit.theta
+    ## precision 0.368 = 1/2.71
+    logit.theta ~ dnorm(0,0.368)
+
+    ## likelihood
+    y ~ dbin(theta,n)
+    ## predicted posterior distribution
+    y.pred ~ dbin(theta,n.pred)
+   }",
+     file="JAGSmodels/predictionexample1soln.jag" )
+@
+
+Next, investigate what happens with each of the priors you specified above when you increase sample size to 1000 (instead of 10), with number of successes equal to 100 rather than 0. What you should find is that the likelihood starts to dominate in determining the posterior, the prior has basically no influence on the posterior when sample size is relatively large.
+
+
+
+\section{Priors for $\sigma^2$ of the observable variables}
+
+When specifying priors for the observable variable's variance, 
+we are generally going to use either $\tau \sim Gamma(0.001,0.001)$, where $\tau = \frac{1}{\sigma^2}$, or a Uniform distribution with an appropriate range, such as Unif(0,100).  The Gamma makes the prior for $\sigma^2$ an inverse gamma. See Lunn et al., page 87\cite{lunn2012bugs} for discussion on why.
+
+
+\section{Priors for $\sigma^2$ of the random effects variance components}
+
+Lunn et al.\ say that an apparently vague prior for random effects variance components can have undesirable consequences. You can use a Gamma(a,b) with a,b small, or a uniform Unif(-10,10) on the log of the sd, but the choice of parameters can affect the posterior. \textbf{Note however that this statement does not seem to be true for standard datasets in psycholinguistics, perhaps because we have so much data.}
+%(to-do: need to check whether this is true for the large amounts of data we have in psycholx.)
+
+Gelman\cite{gelman2006prior} recommends using a \textbf{uniform prior} on a plausible range of standard deviation, or a \textbf{half-normal with large variance}. When an informative prior is needed, he recommends working with a half-t family of distributions, which includes the half-Cauchy as a special case. The half-Cauchy can be defined indirectly: if $z$ is a random variable with $z\sim N(0,B^2)$, and a random variable $\gamma$ is chi-squared with df=1 (i.e., $\gamma$ is Gamma(0.5,0.5)), then $z/\sqrt{\gamma}$ is Cauchy distributed with mean 0 and sd B. This can be defined in BUGS as follows: 
+%%(to-do, see chapter 10.4 of Lunn et al.)):
+
+\begin{verbatim}
+omega <- abs(z)/sqrt(gamma)
+z ~ dnorm(0,inv.B.squared)
+inv.B.squared<- 1/pow(B,2)
+gamma ~ dgamma(0.5,0.5)
+\end{verbatim}
+
+To simplify matters, in this course, we will only use the uniform prior on the random effects variance components. For reading times on the log scale, I use Unif(0,10), i.e., I am agnostic about the value of the variance components, but I know it's going to be 0 or positive.
+This makes sense because we will almost never have any prior beliefs about these components (our focus is on the fixed effects). 
+%to-do: look at aphasia data and variance components there.
+
+\section{Priors for variance-covariance matrices}
+
+Suppose we have a repeated measures design with two conditions.
+Let $i$ range over subjects ($i=1,\dots,n$); 
+$j$ ranges over the two conditions ($j=1,2$); 
+and $k$ range over the items ($k=1,\dots,m$).
+
+We are going to specify a model like the familiar one below:
+
+\begin{verbatim}
+lmer(log.rt~condition + (1|subj)+(condition -1 | subj)+(1|item))
+\end{verbatim}
+
+The specification of this model with varying intercepts for subjects ($u_{0i}$) and items ($w_{0k}$), and varying slopes ($u_{1i}$) by subject (without a correlation component) is as follows.
+
+\begin{equation}
+y_{ijk} = (\beta_{0}+u_{0i} + w_{0k}) + (\beta_1 + u_{1i}) + e_{ijk}
+\end{equation}
+
+\noindent
+where 
+
+\begin{equation}
+\begin{pmatrix}
+  u_{0i} \\ 
+  u_{1i}
+\end{pmatrix}
+\sim 
+N(
+\begin{pmatrix}
+  0 \\ 
+  0
+\end{pmatrix},
+\begin{pmatrix}
+  \sigma_{u_{0i}}^2  & \rho\sigma_{u_{0i}} \sigma_{u_{1i}}\\ 
+  \rho\sigma_{u_{0i}} \sigma_{u_{1i}} &\sigma_{{u_{1i}}}^2
+\end{pmatrix}
+)\quad \hbox{ and } w_{0k} \sim N(0, \sigma_{w0k})  
+\end{equation}
+
+and 
+
+\begin{equation}
+\epsilon_{ijk} \sim N(0,\sigma^2)
+\end{equation}
+
+In other words, the variance covariance matrix for the \textbf{by subjects} varying intercepts is:
+
+\begin{equation}
+\Sigma = 
+\begin{pmatrix}
+  \sigma_{u_{0i}}^2  & \rho\sigma_{u_{0i}} \sigma_{u_{1i}}\\ 
+  \rho\sigma_{u_{0i}} \sigma_{u_{1i}} &\sigma_{{u_{1i}}}^2
+\end{pmatrix}
+\end{equation}
+
+
+with $\rho=0$.
+
+What kind of prior can we define for this vcov matrix? For $\Omega$, the \textbf{precision matrix}\footnote{Recall that precision is the inverse of variance.} we can take a Wishart(R,k) prior; R denotes the \textbf{inverse scale matrix}, and k the degrees of freedom.\footnote{The Wishart distribution is the multivariate analog of the gamma distribution.} 
+
+To get a feel for what a distribution for a variance-covariance matrix might be like, recall that we can plot the distribution of a normally distributed random variable by sampling from it:
+
+<<eval=F>>=
+x<-seq(-4,4,by=0.01)
+plot(x,dnorm(x))
+@
+
+Similarly, we can sample from a Wishart distribution, but this time we will get random matrices as output:
+
+<<>>=
+library(MCMCpack)
+draw <- rwish(3, matrix(c(1,.3,.3,1),2,2))
+@
+
+I have no experience in plotting distributions of covariance matrices,\footnote{See
+\textit{Visualizing Distributions of Covariance Matrices}, by
+Tomoki Tokuda, Ben Goodrich, Iven Van Mechelen, Andrew Gelman, Francis Tuerlinckx, for a more authoritative study.} but let me take a shot at it. Run the following code:
+
+<<eval=F,echo=T,fig=F>>=
+nsim<-1000
+store22<-store21<-store12<-store11<-rep(NA,nsim)
+
+for(i in 1:nsim){
+	draw <- rwish(3, matrix(c(1,0.9,0.9,1),2,2))	
+	store11[i]<-draw[1,1]
+	store12[i]<-draw[1,2]
+	store21[i]<-draw[2,1]
+	store22[i]<-draw[2,2]
+}
+
+library(MASS)
+
+variances<-as.matrix(data.frame(store11,store22))
+bivn.kde<-kde2d(variances[,1],variances[,2],n=nsim)
+persp(bivn.kde,phi=10,theta=0,shade=0.2,border=NA,
+      main="Simulated variances' joint distribution")
+@
+
+You can play with the correlation in the off-diagonals and the variances to see what happens to the joint distribution of the variances.
+
+In our example above, the inverse scale matrix R would be:
+
+\begin{equation}
+R = 
+\begin{pmatrix}
+\tau_{subj intercept} & 0 \\
+0 & \tau_{subj slope}
+\end{pmatrix}
+\end{equation}
+
+\noindent
+and $k=2$.
+
+The way we will define this in JAGS is, first we create the zero matrix for the means, and the R matrix, and then generate varying intercepts and slopes (for subjects) from a multivariate normal.
+
+\begin{verbatim}
+## partial BUGS code focusing on the by-subject 
+## variance component priors:
+data
+   {
+   zero[1] <- 0
+   zero[2] <- 0
+   R[1,1] <- 0.1
+   R[1,2] <- 0
+   R[2,1] <- 0
+   R[2,2] <- 0.5
+   }
+model
+   {
+   # Intercept and slope for each person, including random effects
+     for( i in 1:I )
+     {
+     u[i,1:2] ~ dmnorm(zero,Omega.u)
+     }
+     
+   # Define prior for the variance-covariance matrix of the 
+   # random effects for subjects
+     Sigma.u <- inverse(Omega.u)
+     Omega.u  ~ dwish( R, 2 )
+\end{verbatim}
+
+Another way to define this model would be to simply define a prior for each variance component, without defining any prior for the variance-covariance matrix.
+%%to-do: need to test this.
+A fully worked example of the above case will appear in the chapter on linear mixed models.
+
+\subsection{Priors for variance-covariance matrices with dimensions greater than $2\times 2$} \label{lkjcorrreference}
+
+[I'm grateful to Sergio Polini for helping me understand this point. Also see Gelman's blog entry:
+http://andrewgelman.com/2012/08/29/more-on-scaled-inverse-wishart-and-prior-independence/]
+
+Defining priors for $n\times n, n>2$, covariance matrices is difficult 
+because of constraints among the correlation parameters. So you have to 
+define a prior for a large covariance matrix in one go. 
+
+One option is to use the Wishart distribution as we did above, but its parameters are 
+difficult to interpret and a single parameter controls the precision of 
+all elements of the covariance matrix.\cite{omalleyzaslavsky}
+%%to-do: need to elaborate on this. 
+An alternative, proposed by Barnard, McCulloch and Meng\cite{barnardmccullochmeng} is to use a separation 
+strategy, $\Sigma = D R D$,  
+where $D$ is a diagonal matrix of standard deviations and $R$ is a correlation matrix. 
+This allows you to express beliefs about the variance components in $D$ while remaining agnostic about beliefs regarding the correlation matrix.
+
+To model a correlation matrix $Q$, O'Malley and 
+Zaslavsky suggest a scaled inverse-Wishart: 
+
+$\Sigma = diag(xi) Q diag(xi), Q \sim Inv-Wishart(...)$ 
+
+If we set degrees of freedom to n+1, we get a marginal 
+uniform distribution for the correlations, then ``correct'' the 
+constrained variances by a vector xi of scale parameters. 
+See Gelman \& Hill, pp. 286-287. 
+%%to-do: look this up.
+
+Lewandowski, Kurowicka and Joe\cite{lewandowskikorowickajoe} found efficient 
+algorithms to generate random correlation matrices whose distribution 
+depends on a single $\eta$ parameter. If $\eta = 1$ then their distribution 
+is jointly uniform. 
+If $\eta$ is greater than 1, then the distribution is concentrated around the identity matrix, which has 1's in the diagonals and 0's in the off-diagonals (recall that it's a multivariate distribution), and as $\eta$ increases, the distribution becomes more sharply concentrated around the identity matrix. If $\eta$ lies between 0 and 1, then there is a trough at the identity matrix.
+This makes the separation strategy proposed by Barnard, McCulloch and Meng
+efficient. Stan implements this algorithm; in Stan, it is called lkj\_corr. We will use this later in the chapter on linear mixed models.
+
+% ou could notice that the joint uniformity results in marginal priors 
+%for individual correlations which are not uniform and the more favors 
+%values close to zero over values close to +/-1 the more K is large, but 
+%it could make sense because the positive definite constraint is more 
+%restrictive as the correlations move away from zero [2]. 
+
+\subsection{Visualizing the lkj\_corr matrix}
+
+I quote verbatim from Ben Goodrich's response to a question from me about how to visualize the correlation matrix.
+
+The following code
+\begin{quote}
+``randomly draws from the LKJ distribution (quickly).
+
+When the shape parameter is not equal to 1, then the correlations do not all have the same marginal distribution, unless you do a symmetric permutation of the rows and columns of the correlation matrix. But a marginal correlation is a red herring anyway.
+
+In my opinion, the thing to visualize is ``effective independence'' --- which is the determinant of the correlation matrix raised to the power of $1/K$ or equivalently the geometric mean of the eigenvalues --- as $K$ and the shape parameter varies. So, something like:
+\end{quote}
+
+\begin{figure}
+<<echo=T,fig=T>>=
+## this is a file provided by Goodrich:
+source("lkj.R")
+stopifnot(require(parallel))
+
+K <- 2:22
+eta <- seq(from = 0, to = 5, length.out = 21)
+eg <- expand.grid(K = K, eta = eta)
+
+ei_lkj <- function(K, eta, SIMS = 1000) {
+  mean(replicate(SIMS, 
+                 exp(2 * mean(log(diag(rcorvine(K, eta, cholesky = TRUE)))))) )
+}
+
+theta_lkj <- mcmapply(ei_lkj, K = eg$K, eta = eg$eta, mc.cores = detectCores())
+
+par(mar = c(5,4,1,1) + .1)
+image(K, eta, matrix(theta_lkj, length(K), length(eta)), las = 1)
+contour(K, eta, matrix(theta_lkj, length(K), length(eta)), las = 1)
+@
+\caption{Visualizing the LKJ correlation matrix, code by Ben Goodrich.}\label{fig:bengoodrich}
+\end{figure}
+
+\clearpage
+
+\begin{Homework}\label{hwvaryingintslopes}
+	
+How would you define a prior for a model with an intercept-slope correlation for subjects random effects? Write down the model mathematically, and then the code in BUGS syntax. The key point here is that you need to define a prior for $\rho$.
+
+In R we would write:
+
+\begin{verbatim}
+lmer(log.rt~condition + (1+condition | subj)+(1|item))
+\end{verbatim}
+
+How would you define a random intercepts and slopes model for item? In R this would be:
+
+\begin{verbatim}
+lmer(log.rt~condition + (1+condition | subj)+(1+condition|item))
+\end{verbatim}
+\end{Homework}
+
+\section{Mixture of priors}
+%to-do
+%For cases where you want to compare alternative priors.
+
+When we have conflicting opinions about priors, we can include competing priors and let the data decide which one is better.
+
+We return to the example on page \pageref{postpredexample}. Suppose there are two possible priors, Beta(3,27) and Beta(3,3), and the probability of each prior (relative belief) being the appropriate one is 0.5. Suppose we observe 2 successes out of 5. What is the better prior for 10 future observations? Intuitively, it's going to be Beta(3,3) (because it represents a success probability of 2/5=0.4 better than a Beta(3,27), which represents a success probability of 3/27.
+
+Note: The \texttt{dcat} function in JAGS below represents the distribution 
+$\frac{\pi_x}{\sum pi_i}$.
+
+<<>>=
+## the data:
+data<-list(## current data:
+          y=2,n=5,
+           ## future data sample size:
+           m=10,
+          ## possible priors:
+           a=c(3,3),b=c(27,3))
+
+cat("
+model
+   {
+    ## prior
+    theta ~ dbeta(a[pick],b[pick])
+    pick ~ dcat(q[1:2])
+    q[1] <- 0.5
+    q[2] <- 0.5
+    ## 1 if prior 1 is picked:
+    q.post[1] <- equals(pick,1)
+    q.post.1 <- q.post[1]
+    ## 1 if prior 2 is picked:
+    q.post[2] <- equals(pick,2)
+    q.post.2 <- q.post[2]
+    ## likelihood:
+    y ~ dbin(theta,n) ## sampling distrn
+    ## predicted posterior distribution
+    y.pred ~ dbin(theta,m) ## predictive distrn
+   }",
+     file="JAGSmodels/mixtureexample1.jag" )
+
+track.variables<-c("y.pred","theta","q.post.1","q.post.2")
+library(rjags)
+
+system.time(
+mixtureeg.mod <- jags.model( 
+  file = "JAGSmodels/mixtureexample1.jag",
+                     data=data,
+                     n.chains = 4,
+                      n.adapt =2000 )
+            )
+
+system.time(
+mixtureeg.res <- coda.samples( mixtureeg.mod,
+                            var = track.variables,
+                            n.iter = 10000,
+                            thin = 20 ) )
+
+summary(mixtureeg.res)
+
+plot(mixtureeg.res)
+@
+
+The summary of the posterior distribution $p(\theta)$ and predicted values:
+
+<<>>=
+summary( mixtureeg.res )[1]
+@
+
+The relative probabilities of q.post.1 and q.post.2 show that prior 2 (Beta(3,3)) is more appropriate given the present data, 2 successes out of 5. The posterior distribution of a future dataset with sample size 10 is represented by y.pred.
+
+\begin{Homework}\label{mixpriors}
+
+Suppose our data was 1 success out of 10. For the same problem as above (predicting the posterior distribution for a future 10 measurements), which of the two priors, Beta(3,27) and Beta(3,3), is more appropriate?
+
+<<echo=F,label=mixturehwsolution>>=
+## the data:
+data<-list(## current data:
+          y=1,n=10,
+           ## future data sample size:
+           m=10,
+          ## possible priors:
+           a=c(3,3),b=c(27,3))
+
+cat("
+model
+   {
+    ## prior
+    theta ~ dbeta(a[pick],b[pick])
+    pick ~ dcat(q[1:2])
+    q[1] <- 0.5
+    q[2] <- 0.5
+    ## 1 if prior 1 is picked:
+    q.post[1] <- equals(pick,1)
+    q.post.1 <- q.post[1]
+    ## 1 if prior 2 is picked:
+    q.post[2] <- equals(pick,2)
+    q.post.2 <- q.post[2]
+    ## likelihood:
+    y ~ dbin(theta,n) ## sampling distrn
+    ## predicted posterior distribution
+    y.pred ~ dbin(theta,m) ## predictive distrn
+   }",
+     file="JAGSmodels/mixturehwexample1.jag" )
+
+track.variables<-c("y.pred","theta","q.post.1","q.post.2")
+library(rjags)
+
+mixtureeg.mod <- jags.model( 
+  file = "JAGSmodels/mixturehwexample1.jag",
+                     data=data,
+                     n.chains = 4,
+                      n.adapt =2000 ,quiet=T)
+
+mixtureeg.res <- coda.samples( mixtureeg.mod,
+                            var = track.variables,
+                            n.iter = 10000,
+                            thin = 20 ) 
+
+#summary(mixtureeg.res)
+@
+
+\end{Homework}
+
+\section{Univariate conjugate prior distributions}
+
+Here is a listing of some conjugate priors, taken from Lunn et al.
+
+%\begin{figure}
+\includegraphics[width=15cm]{figures/conjugatetable}
+%\caption{This is taken from the Lunn et al.}\label{tab31}
+%\end{figure}

@@ -1,0 +1,563 @@
+
+\chapter{Jointly distributed random variables}
+
+\section{Joint distribution functions}
+
+\textbf{Discrete case}
+
+[This section is an extract from Kerns.]
+
+Consider two discrete random variables $X$ and $Y$ with PMFs $f_{X}$ and $f_{Y}$ that are supported on the sample spaces $S_{X}$ and $S_{Y}$, respectively. Let $S_{X,Y}$ denote the set of all possible observed \textbf{pairs} $(x,y)$, called the \textbf{joint support set} of $X$ and $Y$. Then the \textbf{joint probability mass function} of $X$ and $Y$ is the function $f_{X,Y}$ defined by
+
+\begin{equation}
+f_{X,Y}(x,y)=\mathbb{P}(X=x,\, Y=y),\quad \mbox{for }(x,y)\in S_{X,Y}.\label{eq-joint-pmf}
+\end{equation}
+
+Every joint PMF satisfies
+
+\begin{equation}
+f_{X,Y}(x,y)>0\mbox{ for all }(x,y)\in S_{X,Y},
+\end{equation}
+
+and
+
+\begin{equation}
+\sum_{(x,y)\in S_{X,Y}}f_{X,Y}(x,y)=1.
+\end{equation}
+
+It is customary to extend the function $f_{X,Y}$ to be defined on all of $\mathbb{R}^{2}$ by setting $f_{X,Y}(x,y)=0$ for $(x,y)\not\in S_{X,Y}$. 
+
+In the context of this chapter, the PMFs $f_{X}$ and $f_{Y}$ are called the \textbf{marginal PMFs} of $X$ and $Y$, respectively. If we are given only the joint PMF then we may recover each of the marginal PMFs by using the Theorem of Total Probability: observe
+\begin{eqnarray}
+f_{X}(x) & = & \mathbb{P}(X=x),\\
+ & = & \sum_{y\in S_{Y}}\mathbb{P}(X=x,\, Y=y),\\
+ & = & \sum_{y\in S_{Y}}f_{X,Y}(x,y).
+\end{eqnarray}
+By interchanging the roles of $X$ and $Y$ it is clear that 
+\begin{equation}
+f_{Y}(y)=\sum_{x\in S_{X}}f_{X,Y}(x,y).\label{eq-marginal-pmf}
+\end{equation}
+Given the joint PMF we may recover the marginal PMFs, but the converse is not true. Even if we have \textbf{both} marginal distributions they are not sufficient to determine the joint PMF; more information is needed.
+%\footnote{We are not at a total loss, however. There are Frechet bounds which pose limits on how large (and small) the joint distribution must be at each point.}
+
+Associated with the joint PMF is the \textbf{joint cumulative distribution function} $F_{X,Y}$ defined by
+\[
+F_{X,Y}(x,y)=\mathbb{P}(X\leq x,\, Y\leq y),\quad \mbox{for }(x,y)\in\mathbb{R}^{2}.
+\]
+The bivariate joint CDF is not quite as tractable as the univariate CDFs, but in principle we could calculate it by adding up quantities of the form in Equation~\ref{eq-joint-pmf}. The joint CDF is typically not used in practice due to its inconvenient form; one can usually get by with the joint PMF alone.
+
+\begin{center}
+\begin{fmpage}{0.9\linewidth}
+\textbf{Examples from Kerns}:  
+\textbf{Example 1}:
+
+Roll a fair die twice. Let $X$ be the face shown on the first roll, and let $Y$ be the face shown on the second roll. For this example, it suffices to define
+
+\[
+f_{X,Y}(x,y)=\frac{1}{36},\quad x=1,\ldots,6,\ y=1,\ldots,6.
+\]
+
+The marginal PMFs are given by $f_{X}(x)=1/6$, $x=1,2,\ldots,6$, and $f_{Y}(y)=1/6$, $y=1,2,\ldots,6$, since
+
+\[
+f_{X}(x)=\sum_{y=1}^{6}\frac{1}{36}=\frac{1}{6},\quad x=1,\ldots,6,
+\]
+
+and the same computation with the letters switched works for $Y$.
+
+Here, and in many other ones, the joint support can be written as a product set of the support of $X$ ``times'' the support of $Y$, that is, it may be represented as a cartesian product set, or rectangle, $S_{X,Y}=S_{X}\times S_{Y}$, where $S_{X} \times S_{Y}= \{ (x,y):\ x\in S_{X},\, y\in S_{Y} \} $. This form is a necessary condition for $X$ and $Y$ to be \textbf{independent} (or alternatively \textbf{exchangeable} when $S_{X}=S_{Y}$). But please note that in general it is not required for $S_{X,Y}$ to be of rectangle form.
+
+\textbf{Example 2}: see very involved example 7.2 in Kerns, worth study.
+\end{fmpage}
+\end{center}
+
+
+\textbf{Continuous case}
+
+For random variables $X$ and $y$, the \textbf{joint cumulative pdf} is
+
+\begin{equation}
+F(a,b) = P(X\leq a, Y\leq b) \quad -\infty  < a,b<\infty
+\end{equation}
+
+The \textbf{marginal distributions} of $F_X$ and $F_Y$ are the CDFs of each of the associated RVs:
+
+\begin{enumerate}
+	\item The CDF of $X$:
+
+	\begin{equation}
+	F_X(a) = P(X\leq a) = F_X(a,\infty)	
+	\end{equation}
+
+	\item The CDF of $Y$:
+
+	\begin{equation}
+	F_Y(a) = P(Y\leq b) = F_Y(\infty,b)	
+	\end{equation}
+	
+\end{enumerate}
+
+\begin{definition}\label{def:jointcont}
+\textbf{Jointly continuous}: Two RVs $X$ and $Y$ are jointly continuous if there exists a function $f(x,y)$ defined for all real $x$ and $y$, such that for every set $C$:
+
+\begin{equation} \label{jointpdf}
+P((X,Y)\in C) =
+\iintop_{(x,y)\in C} f(x,y)\, dx\,dy 	
+\end{equation}
+
+
+$f(x,y)$ is the \textbf{joint PDF} of $X$ and $Y$.
+
+Every joint PDF satisfies
+\begin{equation}
+f(x,y)\geq 0\mbox{ for all }(x,y)\in S_{X,Y},
+\end{equation}
+and
+\begin{equation}
+\iintop_{S_{X,Y}}f(x,y)\,\mathrm{d} x\,\mathrm{d} y=1.
+\end{equation}
+	
+\end{definition}
+
+For any sets of real numbers $A$ and $B$, and if $C=\{(x,y): x\in A, y\in B  \}$, it follows from equation~\ref{jointpdf} that
+
+\begin{equation} 
+P((X\in A,Y\in B)\in C) = \int_B \int_{A} f(x,y)\, dx\,dy 	
+\end{equation}
+
+Note that
+
+\begin{equation}
+F(a,b) = P(X\in (-\infty,a]),Y\in (-\infty,b]))	= \int_{-\infty}^b \int_{-\infty}^a f(x,y)\, dx\,dy 	
+\end{equation}
+
+Differentiating, we get the joint pdf:
+
+\begin{equation}
+f(a,b) = \frac{\partial^2}{\partial a\partial b} F(a,b)	
+\end{equation}
+
+One way to understand the joint PDF:
+
+\begin{equation}
+P(a<X<a+da,b<Y<b+db)=\int_b^{d+db}\int_a^{a+da} f(x,y)\, dx\, dy \approx f(a,b) da db
+\end{equation}
+
+Hence, $f(x,y)$ is a measure of how probable it is that the random vector $(X,Y)$ will be near $(a,b)$.
+
+\paragraph{Marginal probability distribution functions}\label{marginalpdfs}
+ 
+If X and Y are jointly continuous, they are individually continuous, and their PDFs are:
+
+\begin{equation}
+\begin{split}
+P(X\in A) = & P(X\in A, Y\in (-\infty,\infty))	\\
+= & \int_A \int_{-\infty}^{\infty} f(x,y)\,dy\, dx\\
+= & \int_A f_X(x)\, dx
+\end{split}	
+\end{equation}
+
+\noindent
+where
+
+\begin{equation}
+f_X(x) = \int_{-\infty}^{\infty} f(x,y)\, dy	
+\end{equation}
+
+Similarly:
+
+\begin{equation}
+f_Y(y) =  \int_{-\infty}^{\infty} f(x,y)\, dx		
+\end{equation}
+
+\section{Independent random variables}
+
+Random variables $X$ and $Y$ are independent iff, for any two sets of real numbers $A$ and $B$:
+
+\begin{equation}
+P(X\in A, Y\in B)	= P(X\in A)P(Y\in B)
+\end{equation}
+
+In the jointly continuous case:
+
+\begin{equation}
+f(x,y) = f_X(x)f_Y(y) \quad \hbox{for all } x,y	
+\end{equation} 
+
+A necessary and sufficient condition for the random variables $X$ and $Y$ to be
+independent is for their joint probability density function (or joint probability mass function in the discrete case) $f(x,y)$ to factor into two terms, one depending only on
+$x$ and the other depending only on $y$. 
+%This can be stated as a proposition:
+
+%\begin{proposition}\label{pro:jointindep}
+%\end{proposition}
+
+\textbf{Easy-to-understand example from Kerns}:	
+Let the joint PDF of $(X,Y)$ be given by
+\[
+f_{X,Y}(x,y)=\frac{6}{5}\left(x+y^{2}\right),\quad 0 < x < 1,\ 0 < y < 1.
+\]
+The marginal PDF of $X$ is
+\begin{eqnarray*}
+f_{X}(x) & = & \int_{0}^{1}\frac{6}{5}\left(x+y^{2}\right)\,\mathrm{d} y,\\
+ & = & \left.\frac{6}{5}\left(xy+\frac{y^{3}}{3}\right)\right|_{y=0}^{1},\\
+ & = & \frac{6}{5}\left(x+\frac{1}{3}\right),
+\end{eqnarray*}
+for $0 < x < 1$, and the marginal PDF of $Y$ is
+\begin{eqnarray*}
+f_{Y}(y) & = & \int_{0}^{1}\frac{6}{5}\left(x+y^{2}\right)\,\mathrm{d} x,\\
+ & = & \left.\frac{6}{5}\left(\frac{x^{2}}{2}+xy^{2}\right)\right|_{x=0}^{1},\\
+ & = & \frac{6}{5}\left(\frac{1}{2}+y^{2}\right),
+\end{eqnarray*}
+for $0 < y < 1$. 
+
+In this example the joint support set was a rectangle $[0,1]\times[0,1]$, but it turns out that $X$ and $Y$ are not independent. 
+This is because $\frac{6}{5}\left(x+y^{2}\right)$ cannot be stated as a product of two terms ($f_X(x)f_Y(y)$).
+
+\section{Sums of independent random variables}
+
+[Taken nearly verbatim from Ross.]
+
+Suppose that X and Y are
+independent, continuous random variables having probability density functions $f_X$
+and $f_Y$. The cumulative distribution function of $X + Y$ is obtained as follows:
+
+\begin{equation}
+\begin{split}
+F_{X+Y}(a) =& P(X+Y\leq a)\\
+           =& \iintop_{x+y\leq a} f_{XY}(x,y)\, dx\, dy\\
+           =& \iintop_{x+y\leq a} f_X(x)f_Y(y)\, dx\, dy\\
+           =& \int_{-\infty}^{\infty}\int_{-\infty}^{a-y} f_X(x)f_Y(y)\, dx\, dy\\ 
+           =& \int_{-\infty}^{\infty}\int_{-\infty}^{a-y}f_X(x)\,dx f_Y(y)\, dy\\ 
+           =& \int_{-\infty}^{\infty}F_X(a-y) f_Y(y)\, dy\\ 
+\end{split}	
+\end{equation}
+
+The CDF $F_{X+Y}$ is the \textbf{convolution} of the distributions $F_X$ and $F_Y$. 
+
+
+If we differentiate the above equation, we get the pdf $f_{X+Y}$:
+
+\begin{equation}
+\begin{split}	
+f_{X+Y} =& \frac{d}{dx}\int_{-\infty}^{\infty}F_X(a-y) f_Y(y)\, dy	\\
+=& \int_{-\infty}^{\infty}\frac{d}{dx}F_X(a-y) f_Y(y)\, dy	\\
+=& \int_{-\infty}^{\infty}f_X(a-y) f_Y(y)\, dy
+\end{split}	
+\end{equation}
+
+%to-do: don't know how a differential can be moved inside an integral (never seen that before and I didn't know that was possible to do).
+
+%to-do: examples of diff. distributions
+
+\section{Conditional distributions}
+
+\paragraph{Discrete case}
+
+Recall that the conditional probability of $B$ given $A$, denoted $\mathbb{P}(B\mid A)$, is defined by
+
+\begin{equation}
+\mathbb{P}(B\mid A)=\frac{\mathbb{P}(A\cap B)}{\mathbb{P}(A)},\quad \mbox{if }\mathbb{P}(A)>0.
+\end{equation}
+
+If $X$ and $Y$ are discrete random variables, then we can define the conditional PMF of $X$ given that $Y=y$ as follows:
+
+
+\begin{equation}
+\begin{split}
+p_{X\mid Y}(x\mid y) =& P(X=x\mid Y=y)\\
+                     =& \frac{P(X=x, Y=y)}{P(Y=y)}\\
+                     =& \frac{p(x,y)}{p_Y(y)}
+\end{split}	
+\end{equation}
+
+\noindent
+for all values of $y$ where $p_Y(y)=P(Y=y)>0$.
+
+The \textbf{conditional cumulative distribution function} of $X$ given $Y=y$ is defined, for all $y$ such that $p_Y(y)>0$, as follows:
+
+\begin{equation}
+\begin{split}
+F_{X\mid Y}	=& P(X\leq x\mid Y=y)\\
+            =& \underset{a\leq x}{\overset{}{\sum}} p_{X\mid Y}(a\mid y)
+\end{split}	
+\end{equation}
+
+If $X$ and $Y$ are independent then
+
+\begin{equation}
+p_{X\mid Y}(x\mid y) = P(X=x)=p_X(x)	
+\end{equation}
+
+See the examples starting p.\ 264 of Ross.
+
+%%to-do:
+%An important thing to understand is the phrasing of the question (e.g., in P-Ass3): ``Find the conditional distribution of $X$ given all the possible values of $Y$''.
+
+\paragraph{Continuous case}
+
+[Taken almost verbatim from Ross.]
+
+If $X$ and $Y$ have a joint probability density function $f(x, y)$, then the conditional probability density function of $X$ given that $Y = y$ is defined, for all values of $y$ such that $f_Y(y) > 0$,by
+
+\begin{equation}
+f_{X\mid Y}(x\mid y) = \frac{f(x,y)}{f_Y(y)}	
+\end{equation}
+
+We can understand this definition by considering what 
+$f_{X\mid Y}(x\mid y)\, dx$ amounts to: 
+
+\begin{equation}
+\begin{split}
+f_{X\mid Y}(x\mid y)\, dx =& \frac{f(x,y)}{f_Y(y)} \frac{dxdy}{dy}\\
+		=& \frac{f(x,y)dxdy}{f_Y(y)dy} \\
+		=& \frac{P(x<X<d+dx,y<Y<y+dy)}{y<P<y+dy}
+\end{split}	
+\end{equation}
+
+\section{Joint and marginal expectation}
+
+[Taken nearly verbatim from Kerns.]
+
+Given a function $g$ with arguments $(x,y)$ we would like to know the long-run average behavior of $g(X,Y)$ and how to mathematically calculate it. Expectation in this context is computed by integrating (summing) with respect to the joint probability density (mass) function.
+
+Discrete case:
+
+\begin{equation}
+\mathbb{E}\, g(X,Y)=\mathop{\sum\sum}\limits _{(x,y)\in S_{X,Y}}g(x,y)\, f_{X,Y}(x,y).
+\end{equation}
+
+Continuous case:
+
+\begin{equation}
+\mathbb{E}\, g(X,Y)=\iintop_{S_{X,Y}}g(x,y)\, f_{X,Y}(x,y)\,\mathrm{d} x\,\mathrm{d} y,
+\end{equation}
+
+
+
+
+\textbf{Covariance and correlation}
+
+There are two very special cases of joint expectation: the \textbf{covariance} and the \textbf{correlation}. These are measures which help us quantify the dependence between $X$ and $Y$. 
+
+\begin{definition}
+The \textbf{covariance} of $X$ and $Y$ is
+\begin{equation}
+\mbox{Cov}(X,Y)=\mathbb{E}(X-\mathbb{E} X)(Y-\mathbb{E} Y).
+\end{equation}
+\end{definition}
+
+Shortcut formula for covariance:
+
+
+\begin{equation}
+\mbox{Cov}(X,Y)=\mathbb{E}(XY)-(\mathbb{E} X)(\mathbb{E} Y).
+\end{equation}
+
+The \textbf{Pearson product moment correlation} between $X$ and $Y$ is the covariance between $X$ and $Y$ rescaled to fall in the interval $[-1,1]$. It is formally defined by 
+\begin{equation}
+\mbox{Corr}(X,Y)=\frac{\mbox{Cov}(X,Y)}{\sigma_{X}\sigma_{Y}}.
+\end{equation}
+
+The correlation is usually denoted by $\rho_{X,Y}$ or simply $\rho$ if the random variables are clear from context. There are some important facts about the correlation coefficient: 
+
+\begin{enumerate}
+	\item The range of correlation is $-1\leq\rho_{X,Y}\leq1$.
+	\item Equality holds above ($\rho_{X,Y}=\pm1$) if and only if $Y$ is a linear function of $X$ with probability one.
+\end{enumerate}
+
+\begin{center}
+\begin{fmpage}{\linewidth}
+\textbf{Discrete example}:
+to-do
+\end{fmpage}
+\end{center}
+
+\begin{center}
+\begin{fmpage}{\linewidth}
+\textbf{Continuous example from Kerns}:
+Let us find the covariance of the variables $(X,Y)$ from an example numbered 7.2 in Kerns. The expected value of $X$ is
+\[
+\mathbb{E} X=\int_{0}^{1}x\cdot\frac{6}{5}\left(x+\frac{1}{3}\right)\mathrm{d} x=\left.\frac{2}{5}x^{3}+\frac{1}{5}x^{2}\right|_{x=0}^{1}=\frac{3}{5},
+\]
+and the expected value of $Y$ is
+\[
+\mathbb{E} Y=\int_{0}^{1}y\cdot\frac{6}{5}\left(\frac{1}{2}+y^{2}\right)\mathrm{d} x=\left.\frac{3}{10}y^{2}+\frac{3}{20}y^{4}\right|_{y=0}^{1}=\frac{9}{20}.
+\]
+Finally, the expected value of $XY$ is
+\begin{eqnarray*}
+\mathbb{E} XY & = & \int_{0}^{1}\int_{0}^{1}xy\,\frac{6}{5}\left(x+y^{2}\right)\mathrm{d} x\,\mathrm{d} y,\\
+ & = & \int_{0}^{1}\left.\left(\frac{2}{5}x^{3}y+\frac{3}{10}xy^{4}\right)\right|_{x=0}^{1}\mathrm{d} y,\\
+ & = & \int_{0}^{1}\left(\frac{2}{5}y+\frac{3}{10}y^{4}\right)\mathrm{d} y,\\
+ & = & \frac{1}{5}+\frac{3}{50},
+\end{eqnarray*}
+which is 13/50. Therefore the covariance of $(X,Y)$ is
+\[
+\mbox{Cov}(X,Y)=\frac{13}{50}-\left(\frac{3}{5}\right)\left(\frac{9}{20}\right)=-\frac{1}{100}.
+\]
+\end{fmpage}
+\end{center}
+
+\section{Conditional expectation}
+
+Recall that
+
+\begin{equation}
+f_{X\mid Y} (x\mid y) = P(X = x\mid Y = y) = \frac{p_{X,Y}(x,y)}{p_Y(y)}	
+\end{equation}
+
+\noindent 
+for all $y$ such that $P(Y=y)>0$.
+
+It follows that
+
+\begin{equation}
+\begin{split}
+	E[X\mid Y=y] =& \underset{x}{\overset{}{\sum}} xP(X=x\mid Y=y)\\
+	=& \underset{x}{\overset{}{\sum}} xp_{X\mid Y}(x\mid y)
+\end{split}	
+\end{equation}
+
+$E[X\mid Y]$ is that \textbf{function} of the random variable $Y$ whose value at $Y=y$ is $E[X\mid Y=y]$. $E[X\mid Y]$ is a random variable.
+
+\textbf{Relationship to `regular' expectation}
+
+Conditional expectation given that $Y = y$ can be
+thought of as being an ordinary expectation on a reduced sample space consisting
+only of outcomes for which $Y = y$. All properties of expectations hold. Two examples (to-do: spell out the other equations): 
+
+\textbf{Example 1}: to-do: develop some specific examples.
+
+\begin{equation*}
+E[g(X)\mid Y=y]=  \left\{ 	
+\begin{array}{l l}
+       \underset{x}{\sum} g(x)p_{X\mid Y}(x,y) & \quad \textrm{in the discrete case}\\
+       \int_{-\infty}^{\infty} g(x)f_{X\mid Y}(x\mid y)\, dx & \quad \textrm{in the continuous case}\\
+\end{array} \right.
+\end{equation*}
+
+\textbf{Example 2}:
+
+\begin{equation}
+E\left[ \underset{i=1}{\overset{n}{\sum}} X_i\mid Y=y \right] = 
+\underset{i=1}{\overset{n}{\sum}} E[X_i\mid Y=y]	
+\end{equation}
+
+\begin{proposition}\label{pro:condexp}
+\textbf{Expectation of the conditional expectation}
+
+\begin{equation}
+	E[X] = E[E[X\mid Y]]	
+\end{equation}
+
+\end{proposition}
+
+If $Y$ is a discrete random variable, then the above proposition states that 
+
+\begin{equation}
+E[X] = \underset{y}{\overset{}{\sum}} E[X\mid Y = y] P(Y=y)	
+\end{equation}
+
+
+\section{Multivariate normal distributions}
+
+
+
+Recall that in the univariate case:
+
+\begin{equation}
+f(x) = \frac{1}{\sqrt{2\pi \sigma^2}} e\{ - \frac{(\frac{(x-\mu)}{\sigma})^2}{2}\}   \quad -\infty < x < \infty
+\end{equation}
+
+We can write the power of the exponential as:
+
+\begin{equation}
+(\frac{(x-\mu)}{\sigma})^2 = (x-\mu)(x-\mu)(\sigma^2)^{-1} = (x-\mu)(\sigma^2)^{-1}(x-\mu) = Q
+\end{equation}
+
+Generalizing this to the multivariate case: 
+
+\begin{equation}
+Q= (x-\mu)' \Sigma ^{-1} (x-\mu)	
+\end{equation}
+
+So, for multivariate case:
+
+\begin{equation}
+f(x) = \frac{1}{\sqrt{2\pi det \Sigma }} e\{ - Q/2\}	 \quad -\infty < x_i < \infty, i=1,\dots,n
+\end{equation}
+
+
+Properties of the multivariate normal (MVN) X:
+
+\begin{itemize}
+	\item Linear combinations of X are normal distributions.
+	\item All subset's of X's components have a normal distribution.
+	\item Zero covariance implies independent distributions.
+	\item Conditional distributions are normal.
+\end{itemize}
+
+\textbf{Visualizing bivariate distributions}
+
+First, a visual of two uncorrelated RVs:
+
+<<bivaruncorr>>=
+library(MASS)
+
+bivn<-mvrnorm(1000,mu=c(0,1),Sigma=matrix(c(1,0,0,2),2))
+bivn.kde<-kde2d(bivn[,1],bivn[,2],n=50)
+persp(bivn.kde,phi=10,theta=0,shade=0.2,border=NA,
+      main="Simulated bivariate normal density")
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<bivaruncorr>>
+@
+\caption{Visualization of two uncorrelated random variables.} \label{fig:bivaruncorr}
+\end{marginfigure}
+
+And here is an example of a positively correlated case: 
+
+<<bivarcorr>>=
+bivn<-mvrnorm(1000,mu=c(0,1),Sigma=matrix(c(1,0.9,0.9,2),2))
+bivn.kde<-kde2d(bivn[,1],bivn[,2],n=50)
+persp(bivn.kde,phi=10,theta=0,shade=0.2,border=NA,
+      main="Simulated bivariate normal density")
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F,label=bivarcorrrepeated>>=
+<<bivarcorr>>
+@
+\caption{Visualization of two correlated random variables.} \label{fig:bivarcorr}
+\end{marginfigure}
+
+
+And here is an example with a negative correlation:
+
+<<bivarnegcorr>>=
+bivn<-mvrnorm(1000,mu=c(0,1),
+              Sigma=matrix(c(1,-0.9,-0.9,2),2))
+bivn.kde<-kde2d(bivn[,1],bivn[,2],n=50)
+persp(bivn.kde,phi=10,theta=0,shade=0.2,border=NA,
+      main="Simulated bivariate normal density")
+@
+
+\begin{marginfigure}
+<<fig=T,echo=F>>=
+<<bivarnegcorr>>
+@
+\caption{Visualization of two negatively correlated random variables.} \label{fig:bivarcorrneg}
+\end{marginfigure}
+
+\textbf{Visualizing conditional distributions}
+
+You can run the following code to get a visualization of what a conditional distribution looks like when we take ``slices'' from the conditioning random variable:
+
+<<fig=F,eval=F>>=
+for(i in 1:50){
+  plot(bivn.kde$z[i,1:50],type="l",ylim=c(0,0.1))
+  Sys.sleep(.5)
+}
+@

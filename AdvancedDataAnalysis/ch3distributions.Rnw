@@ -1,0 +1,571 @@
+
+\chapter{Important distributions}
+
+
+\section{Multinomial coefficients and multinomial distributions}
+
+[Taken almost verbatim from Kerns, with some additional stuff from Ross.]
+
+We sample $n$ times, with replacement, from an urn that contains balls of $k$ different types. Let $X_{1}$ denote the number of balls in our sample of type 1, let $X_{2}$ denote the number of balls of type 2, ..., and let $X_{k}$ denote the number of balls of type $k$. Suppose the urn has proportion $p_{1}$ of balls of type 1, proportion $p_{2}$ of balls of type 2, ..., and proportion $p_{k}$ of balls of type $k$. Then the joint PMF of $(X_{1},\ldots,X_{k})$ is
+\begin{eqnarray}
+f_{X_{1},\ldots,X_{k}}(x_{1},\ldots,x_{k}) & = & {n \choose x_{1}\, x_{2}\,\cdots\, x_{k}}\, p_{1}^{x_{1}}p_{2}^{x_{2}}\cdots p_{k}^{x_{k}},
+\end{eqnarray}
+for $(x_{1},\ldots,x_{k})$ in the joint support $S_{X_{1},\ldots X_{K}}$. We write
+\begin{equation}
+(X_{1},\ldots,X_{k})\sim\mathsf{multinom}(\mathtt{size}=n,\,\mathtt{prob}=\mathbf{p}_{\mathrm{k}\times1}).
+\end{equation}
+
+Note:
+
+First, the joint support set $S_{X_{1},\ldots X_{K}}$ contains all nonnegative integer $k$-tuples $(x_{1},\ldots,x_{k})$ such that $x_{1}+x_{2}+\cdots+x_{k}=n$. A support set like this is called a \textit{simplex}. Second, the proportions $p_{1}$, $p_{2}$, ..., $p_{k}$ satisfy $p_{i}\geq0$ for all $i$ and $p_{1}+p_{2}+\cdots+p_{k}=1$. Finally, the symbol
+\begin{equation}
+{n \choose x_{1}\, x_{2}\,\cdots\, x_{k}}=\frac{n!}{x_{1}!\, x_{2}!\,\cdots x_{k}!}
+\end{equation}
+is called a \emph{multinomial coefficient} which generalizes the notion of a binomial coefficient.
+
+\begin{center}
+\begin{fmpage}{0.9\linewidth}
+\textbf{Example from Ross}:
+
+Suppose a fair die is rolled nine times. The probability that 1 appears three times, 2 and 3 each appear twice, 4 and 5 each appear once, and 6 not at all, can be computed using the multinomial distribution formula.
+
+Here, for $i=1,\dots,6$, it is clear that  $p_i==\frac{1}{6}$. And it is clear that $n=9$, and $x_1=3$, $x_2=2$, $x_3=2$, $x_4=1$, $x_5=1$, and $x_6=0$. We plug in the values into the formula:
+
+\begin{eqnarray}
+f_{X_{1},\ldots,X_{k}}(x_{1},\ldots,x_{k}) & = & {n \choose x_{1}\, x_{2}\,\cdots\, x_{k}}\, p_{1}^{x_{1}}p_{2}^{x_{2}}\cdots p_{k}^{x_{k}}
+\end{eqnarray}
+
+Plugging in the values:
+
+\begin{eqnarray}
+f_{X_{1},\ldots,X_{k}}(x_{1},\ldots,x_{k}) & = & {9 \choose 3\,2\,2\,1\,1\,0}\, \frac{1}{6}^{3}\frac{1}{6}^{2}\frac{1}{6}^2 \frac{1}{6}^1 \frac{1}{6}^1 \frac{1}{6}^{0} 
+\end{eqnarray}
+
+Answer: $\frac{9!}{3!2!2!} \left(\frac{1}{6}\right)^9$
+
+%If we had thrown the die only two times, we have the binomial distribution.
+\end{fmpage}
+\end{center}
+
+
+\section{The Poisson distribution}
+
+As Kerns puts it (I quote him nearly exactly, up to the definition):
+
+\begin{quote}
+  This is a distribution associated with ``rare events'', for reasons which will become clear in a moment. The events might be:
+  \begin{itemize}
+    \item traffic accidents,
+		\item typing errors, or
+		\item customers arriving in a bank.		
+	\end{itemize}
+
+For us, I suppose one application might be in eye tracking: modeling number of fixations. Psychologists often treat these as continuous values, which doesn't seem to make much sense to me (what kind of continuous random variable would generate a distribution of 0,1, 2, 3 fixations?).
+
+	Let $\lambda$ be the average number of events in the time interval $[0,1]$. Let the random variable $X$ count the number of events occurring in the interval. Then under certain reasonable conditions it can be shown that
+
+	\begin{equation}
+	f_{X}(x)=\mathbb{P}(X=x)=\mathrm{e}^{-\lambda}\frac{\lambda^{x}}{x!},\quad x=0,1,2,\ldots
+	\end{equation}
+\end{quote}
+
+
+
+\section{Geometric distribution}
+
+From Ross \cite{RossProb} (page 155):
+
+\begin{quote}
+Let independent trials, each with probability $p$, $0<p<1$ of success, be performed until a success occurs. If $X$ is the number of trials required till success occurs, then
+
+\begin{equation*}
+P(X=n)	= (1-p)^{n-1} p \quad n=1,2,\ldots
+\end{equation*}
+
+I.e., for X to equal n, it is necessary and sufficient that the first $n-1$ are failures, and the $n$th trial is a success. The above equation comes about because the successive trials are independent.
+\end{quote}
+
+$X$ is a geometric random variable with parameter $p$.
+
+Note that a success will occur, with probability 1:
+
+\begin{equation*}
+\underset{i=1}{\overset{\infty}{\sum}} P(X=n) = p \underset{i=1}{\overset{\infty}{\sum}} (1-p)^{n-1} \explain{=}{\textrm{see geometric series section.}}	\frac{p}{1-(1-p)} = 1
+\end{equation*}
+
+
+%Kerns \cite{kerns} defines it like this:
+
+%\begin{equation}
+%\sum_{k=0}^{\infty} x^{k} = \frac{1}{1 - x},\quad |x| < 1.\label{eq-geom-series}
+%\end{equation}
+
+\paragraph{Mean and variance of the geometric distribution}
+
+\begin{equation*}
+E[X] = \frac{1}{p}	
+\end{equation*}
+
+\begin{equation*}
+Var(X) = \frac{1-p}{p^2}	
+\end{equation*}
+
+For proofs, see Ross \cite{RossProb} (pages 156-157).
+
+\section{Exponential random variables}
+
+For some $\lambda > 0$, 
+
+\begin{equation*}
+f(x)=  \left\{   
+\begin{array}{l l}
+       \lambda e^{-\lambda x} & \quad \textrm{if } x \geq 0\\
+       0 & \quad \textrm{if } x < 0.\\
+\end{array} \right.
+\end{equation*}
+
+A continuous random variable with the above PDF is an exponential random variable (or is said to be exponentially distributed).
+
+The CDF:
+
+\begin{equation*}
+\begin{split}
+F(a) =& P(X\leq a)\\
+     =& \int_0^a \lambda e^{-\lambda x}\, dx\\
+    =& \left[ -e^{-\lambda x} \right]_0^a\\
+     =& 1-e^{-\lambda a} \quad a \geq 0\\
+\end{split}		
+\end{equation*}
+
+[Note: the integration requires the u-substitution: $u=-\lambda x$, and then $du/dx=-\lambda$, and then use $-du=\lambda dx$ to solve.]
+
+\paragraph{Expectation and variance of an exponential random variable}
+
+For some $\lambda > 0$ (called the rate), if we are given the PDF of a random variable $X$:
+
+\begin{equation*}
+f(x)=  \left\{ 	
+\begin{array}{l l}
+       \lambda e^{-\lambda x} & \quad \textrm{if } x \geq 0\\
+       0 & \quad \textrm{if } x < 0.\\
+\end{array} \right.
+\end{equation*}
+
+Find E[X].
+
+[This proof seems very strange and arbitrary---one starts really generally and then scales down, so to speak. The standard method can equally well be used, but this is more general, it allows for easy calculation of the second moment, for example. Also, it's an example of how reduction formulae are used in integration.]
+
+\begin{equation*}
+E[X^n] = \int_0^\infty x^n \lambda e^{-\lambda x} \, dx	
+\end{equation*}
+
+Use integration by parts:
+
+Let $u=x^n$, which gives $du/dx=n x^{n-1}$. Let $dv/dx= \lambda e^{-\lambda x}$, which gives
+$v = -e^{-\lambda x}$. Therefore:
+
+\begin{equation*}
+\begin{split}	
+E[X^n] =&  \int_0^\infty x^n \lambda e^{-\lambda x} \, dx	\\
+       =& \left[ -x^n e^{-\lambda x}\right]_0^\infty + \int_0^\infty e^{\lambda x} n x^{n-1}\, dx\\
+       =& 0 + \frac{n}{\lambda} \int_0^\infty \lambda e^{-\lambda x} n^{n-1}\, dx  
+\end{split}
+\end{equation*}
+
+Thus,
+
+\begin{equation*}
+E[X^n] =  \frac{n}{\lambda}E[X^{n-1}]
+\end{equation*}
+
+If we let $n=1$, we get $E[X]$:
+
+\begin{equation*}
+E[X] =  \frac{1}{\lambda}
+\end{equation*}
+
+Note that when $n=2$, we have
+
+\begin{equation*}
+E[X^2] =  \frac{2}{\lambda}E[X]= \frac{2}{\lambda^2}
+\end{equation*}
+
+Variance is, as usual,
+
+\begin{equation*}
+var(X) = E[X^2] - (E[X])^2	=  \frac{2}{\lambda^2} -  (\frac{1}{\lambda})^2 = \frac{1}{\lambda^2}
+\end{equation*}
+
+
+\section{Gamma distribution}
+
+[The text is an amalgam of
+ Kerns and Ross\cite{RossProb} (page 215). I don't put it in double-quotes as a citation because it would look ugly.]
+
+This is a generalization of the exponential distribution. We say that $X$ has a gamma distribution and write $X\sim\mathsf{gamma}(\mathtt{shape}=\alpha,\,\mathtt{rate}=\lambda)$, where $\alpha>0$ (called shape) and $\lambda>0$ (called rate). It has PDF
+
+%% Kerns:
+%\begin{equation*}
+%f_{X}(x)=\frac{\lambda^{\alpha}}{\Gamma(\alpha)}\: x^{\alpha-1}\mathrm{e}^{-\lambda x},\quad x>0.
+%\end{equation*}
+
+\begin{equation*}
+f(x)=  \left\{ 	
+\begin{array}{l l}
+       \frac{\lambda e^{-\lambda x} (\lambda x)^{\alpha - 1}}{\Gamma(\alpha)} & \quad \textrm{if } x \geq 0\\
+       0 & \quad \textrm{if } x < 0.\\
+\end{array} \right.
+\end{equation*}
+
+$\Gamma(\alpha)$ is called the gamma function:
+
+\begin{equation*}
+\Gamma(\alpha) = \int_0^\infty e^{-y}y^{\alpha-1}\, dy \explain{=}{\textrm{integration by parts}} (\alpha -1 )\Gamma(\alpha - 1)
+\end{equation*}
+
+Note that for integral values of $n$, $\Gamma(n)=(n-1)!$ (follows from above equation).
+
+The associated $\mathsf{R}$ functions are \texttt{gamma(x, shape, rate = 1)}, \texttt{pgamma}, \texttt{qgamma}, and \texttt{rgamma}, which give the PDF, CDF, quantile function, and simulate random variates, respectively. If $\alpha=1$ then $X\sim\mathsf{exp}(\mathtt{rate}=\lambda)$. The mean is $\mu=\alpha/\lambda$ and the variance is $\sigma^{2}=\alpha/\lambda^{2}$.
+
+To motivate the gamma distribution recall that if $X$ measures the length of time until the first event occurs in a Poisson process with rate $\lambda$ then $X\sim\mathsf{exp}(\mathtt{rate}=\lambda)$. If we let $Y$ measure the length of time until the $\alpha^{\mathrm{th}}$ event occurs then $Y\sim\mathsf{gamma}(\mathtt{shape}=\alpha,\,\mathtt{rate}=\lambda)$. When $\alpha$ is an integer this distribution is also known as the \textbf{Erlang} distribution.
+
+
+<<label=gamma,include=FALSE>>=
+## fn refers to the fact that it is a function in R, 
+## it does not mean that this is the gamma function:
+gamma.fn<-function(x){
+	lambda<-1
+	alpha<-1
+	(lambda * exp(1)^(-lambda*x) * 
+	(lambda*x)^(alpha-1))/gamma(alpha)
+}
+
+x<-seq(0,4,by=.01)
+
+plot(x,gamma.fn(x),type="l")
+@
+
+\begin{marginfigure}
+<<fig=TRUE,echo=FALSE>>=
+<<gamma>>	
+@
+\caption{The gamma distribution.}.
+\label{fig:gamma}
+\end{marginfigure}
+
+The Chi-squared distribution is the gamma distribution with $\lambda=1/2$ and $\alpha=n/2$, where $n$ is an integer:
+
+
+<<label=chisq,include=FALSE>>=
+gamma.fn<-function(x){
+	lambda<-1/2
+	alpha<-8/2 ## n=4
+	(lambda * (exp(1)^(-lambda*x)) * 
+	(lambda*x)^(alpha-1))/gamma(alpha)
+}
+
+x<-seq(0,100,by=.01)
+
+plot(x,gamma.fn(x),type="l")
+@
+
+\begin{marginfigure}
+<<fig=TRUE,echo=FALSE>>=
+<<chisq>>	
+@
+\caption{The chi-squared distribution.}
+\label{fig:chisq}
+\end{marginfigure}
+
+\paragraph{Mean and variance of gamma distribution}
+
+Let $X$ be a gamma random variable with parameters $\alpha$ and $\lambda$. 
+
+\begin{equation*}
+\begin{split}	
+E[X] =& \frac{1}{\Gamma(\alpha)} \int_0^\infty x \lambda e^{-\lambda x} (\lambda x)^{\alpha - 1}\, dx\\  
+     =& \frac{1}{\lambda \Gamma(\alpha)} \int_0^\infty e^{-\lambda x} (\lambda x)^{\alpha}\, dx\\
+     =& \frac{\Gamma(\alpha+1)}{\lambda \Gamma(\alpha)}\\
+     =& \frac{\alpha}{\lambda} \quad \textrm{see derivation of $\Gamma(\alpha), p.\ 215$  of Ross}
+\end{split}
+\end{equation*}
+
+It is easy to show (exercise) that
+
+\begin{equation*}
+Var(X)=\frac{\alpha}{\lambda^2}	
+\end{equation*}
+
+
+\section{Memoryless property (Poisson, Exponential, Geometric)}
+
+A nonnegative random variable is memoryless if
+
+\begin{equation*}
+P(X>s+t) \mid X > t) = P(X>s) \quad \textrm{for all } s,t\geq 0	
+\end{equation*}
+
+Two equivalent ways of stating this:
+
+\begin{equation*}
+\frac{P(X>s+t, X>t)}{P(X>t)} = P(X>s)
+\end{equation*}
+
+[just using the definition of conditional probability]
+
+or
+
+\begin{equation*}
+P(X>s+t) = P(X>s)P(X>t)
+\end{equation*}
+
+%[not clear yet why the above holds]
+
+
+Recall definition of conditional probability:
+
+\begin{equation*}
+\mathbb{P}(B\mid A)=\frac{\mathbb{P}(A\cap B)}{\mathbb{P}(A)},\quad \mbox{if }\mathbb{P}(A)>0.
+\end{equation*}
+
+What memorylessness means is: let $s=10$ and $t=30$. Then
+
+\begin{equation*}
+\frac{P(X>10+30, X\geq 30)}{P(X\geq 30)} = P(X>10)
+\end{equation*}
+
+or 
+
+\begin{equation*}
+P(X>10+30) = P(X>10)P(X\geq 30)
+\end{equation*}
+
+It does \textbf{not} mean:
+
+\begin{equation*}
+P(X>10+30\mid X\geq30) = P(X>40)
+\end{equation*}
+
+It's easier to see graphically what this means:
+
+
+<<label=exp,include=FALSE>>=
+fn<-function(x,lambda){
+	lambda*exp(1)^(-lambda*x)
+}
+
+x<-seq(0,1000,by=1)
+
+plot(x,fn(x,lambda=1/100),type="l")
+abline(v=200,col=3,lty=3)
+abline(v=300,col=1,lty=3)
+@
+
+\begin{marginfigure}
+<<fig=TRUE,echo=FALSE>>=
+<<exp>>	
+@
+\caption{The memoryless property of the exponential distribution. The graph after point 300 is an exact copy of the original graph (this is not obvious from the graph, but redoing the graph starting from 300 makes this clear, see figure~\ref{fig:exp2} below).}
+\label{fig:exp}
+\end{marginfigure}
+
+
+<<label=exp2,include=FALSE>>=
+x1<-seq(300,1300,by=1)
+
+plot(x1,fn(x1,lambda=1/100),type="l")
+@
+
+\begin{marginfigure}
+<<fig=TRUE,echo=FALSE>>=
+<<exp2>>	
+@
+\caption{Replotting the distribution starting from 300 instead of 0, and extending the x-axis to 1300 instead of 1000 (the number in figure~\ref{fig:exp}) gives us an 
+exact copy of original. This is the meaning of the memoryless property of the distribution.}
+\label{fig:exp2}
+\end{marginfigure}
+
+\textbf{Examples of memorylessness}
+
+%[problem 2 in P-Ass3]
+
+Suppose we are given that a discrete random variable $X$ has probability function $\theta^{x-1}(1-\theta)$, where $x=1,2,\dots$. Show that 
+
+\begin{equation} \label{memoryless}
+P(X>t+a\mid X>a) = \frac{P(X>t+a)}{P(X>a)} 
+\end{equation}
+
+\noindent
+hence establishing the `absence of memory' property:
+
+\begin{equation}
+P(X>t+a\mid X>a) = P(X>t)	
+\end{equation}
+
+\textbf{Proof}:
+
+First, restate the pdf given so that it satisfies the definition of a geometric distribution. Let $\theta=1-p$; then the pdf is
+
+\begin{equation}
+(1-p)^{x-1}p 
+\end{equation}
+
+This is clearly a geometric random variable (see p.\ 155 of Ross). On p.\ 156, Ross points out that  
+
+\begin{equation}
+P(X>a) = (1-p)^a	
+\end{equation}
+
+[Actually Ross points out that $P(X\geq k) = (1-p)^{k-1}$, from which it follows that $P(X\geq k+1) = (1-p)^{k}$; and since $P(X\geq k+1)=P(X>k)$, we have $P(X> k) = (1-p)^{k}$.]
+
+Similarly, 
+
+\begin{equation}
+P(X>t) = (1-p)^t	
+\end{equation}
+
+\noindent
+and 
+
+\begin{equation}
+P(X>{t+a}) = (1-p)^{t+a}
+\end{equation}
+
+Now, we plug in the values for the right-hand side in equation~\ref{memoryless}, repeated below:
+
+\begin{equation}
+P(X>t+a\mid X>a) = \frac{P(X>t+a)}{P(X>a)}  = \frac{(1-p)^{t+a}}{(1-p)^a} = (1-p)^t
+\end{equation}
+
+Thus, since $P(X>t) = (1-p)^t$ (see above), we have proved that
+
+\begin{equation}
+P(X>t+a\mid X>a) = P(X>t)
+\end{equation}
+
+\noindent
+This is the definition of memorylessness (equation 5.1 in Ross, p.\ 210).
+Therefore, we have proved the memorylessness property.
+
+\hfill \BlackBox
+
+Optional exercise (solutions below): Prove the memorylessness property for Gamma and Exponential distributions
+
+\textbf{Exponential}:
+
+The CDF is:
+
+\begin{equation}
+P(a)=1-e^{-\lambda a}
+\end{equation}
+
+Therefore: 
+
+\begin{equation}
+\begin{array}{ll}
+P(X>s+t)  &= 1-P(s+t) \\
+          &= 1-(1-e^{-\lambda (s+t)})\\ 
+          &= e^{-\lambda (s+t)} \\
+          &= e^{-\lambda s}e^{-\lambda t}\\
+          &= P(X>s)P(X>t)\\
+\end{array}
+\end{equation}
+
+
+
+The above is the definition of memorylessness.
+
+\hfill \BlackBox
+
+\textbf{Gamma distribution}:
+
+The CDF (not sure how this comes about, see Ross) is
+
+\begin{equation}
+	F(x; \alpha, \beta) = 1 - \underset{i=0}{\overset{\alpha - 1}{\sum}}\frac{1}{i!}(\beta x)^i e^{-\beta x} 
+\end{equation}
+
+Therefore, 
+
+\begin{equation}
+\begin{array}{ll}
+P(X>s+t) &= 1-P(X<s+t) \\
+         &= 1 - (1 - \underset{i=0}{\overset{\alpha - 1}{\sum}}\frac{1}{i!}(\beta (s+t))^i e^{-\beta (s+t)} )\\
+         &= \underset{i=0}{\overset{\alpha - 1}{\sum}}\frac{1}{i!}(\beta (s+t))^i e^{-\beta (s+t)}\\
+\end{array}         
+\end{equation}
+
+\section{Beta distribution} \label{betadef}
+
+This is a generalization of the continuous uniform distribution.
+
+\begin{equation*}
+f(x)=  \left\{ 	
+\begin{array}{l l}
+       \frac{1}{B(a,b)} x^{a - 1} (1-x)^{b-1}  & \quad \textrm{if } 0< x < 1\\
+       0 & \quad \textrm{otherwise}\\
+\end{array} \right.
+\end{equation*}
+
+\noindent
+where
+
+\begin{equation*}
+B(a,b) = \int_0^1 x^{a-1}(1-x)^{b-1}\, dx
+\end{equation*}
+
+There is a connection between the beta and the gamma:
+
+\begin{equation*}
+B(a,b) = \int_0^1 x^{a-1}(1-x)^{b-1}\, dx = \frac{\Gamma(a)\Gamma(b)}{\Gamma(a+b)}	
+\end{equation*}
+
+\noindent
+which allows us to rewrite the beta PDF as
+
+\begin{equation}
+f(x)=\frac{\Gamma(a+b)}{\Gamma(a)\Gamma(b)}\, x^{a-1}(1-x)^{b-1},\quad 0 < x < 1.
+\end{equation}
+
+%We write $X\sim\mathsf{beta}(\mathtt{shape1}=\alpha,\,\mathtt{shape2}=\beta)$. The associated $\mathsf{R}$ function is =dbeta(x, shape1, shape2)=. 
+
+The mean and variance are
+
+\begin{equation} 
+E[X]=\frac{a}{a+b}\mbox{ and }Var(X)=\frac{ab}{\left(a+b\right)^{2}\left(a+b+1\right)}.
+\end{equation}
+
+%See Example [[exa-cont-pdf3x2][Cont-pdf3x2]]. This distribution comes up a lot in Bayesian statistics because it is a good model for one's prior beliefs about a population proportion $p$, $0\leq p\leq1$.
+
+This distribution is going to turn up a lot in bayesian data analysis.
+
+\section{$t$ distribution}
+
+A random variable $X$ with PDF
+
+\begin{equation}
+f_{X}(x) = \frac{\Gamma\left[ (r+1)/2\right] }{\sqrt{r\pi}\,\Gamma(r/2)}\left( 1 + \frac{x^{2}}{r} \right)^{-(r+1)/2},\quad -\infty < x < \infty
+\end{equation}
+
+is said to have Student's $t$ distribution with $r$ degrees of freedom, and we write $X\sim\mathsf{t}(\mathtt{df}=r)$. 
+The associated $\mathsf{R}$ functions are dt, pt, qt, and rt, which give the PDF, CDF, quantile function, and simulate random variates, respectively. 
+
+We will just write:
+
+$X\sim t(\mu,\sigma^2,r)$, where $r$ is the degrees of freedom $(n-1)$, where $n$ is sample size.
+
+to-do: much more detail needed.
+%% see wiki edit.
+
+\section{Inverse Gamma}
+
+This is defined as:
+
+\begin{equation}
+f(\theta) = \int_{-\infty}^{\infty} \frac{a^d\theta^{-(d+1)} \exp\{-\frac{a}{\theta}\} }{\Gamma(d)}\,d\theta
+\end{equation}
+
+
+\section{Class activity}
+
+

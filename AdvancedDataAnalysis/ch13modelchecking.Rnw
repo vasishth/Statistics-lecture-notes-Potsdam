@@ -1,0 +1,1014 @@
+
+\chapter{Model checking}
+
+
+\section{Example: Newcomb's speed of light data}
+
+Simon Newcomb measured the time (recorded as deviations from 24,800 nanosecs) it takes for light to travel 7442 meters.
+
+<<>>=
+newcomb <-
+c(28,26,33,24,34,-44,27,16,40,-2,
+29,22,24,21,25,30,23,29,31,19,
+24,20,36,32,36,28,25,21,28,29,
+37,25,28,26,30,32,36,26,30,22,
+36,23,27,27,28,27,31,27,26,33,
+26,32,32,24,39,28,24,25,32,25,
+29,27,28,29,16,23)
+@
+
+Let's look at the data.
+Two points looks like  outliers:
+
+<<fig=T>>=
+hist(newcomb,breaks=50)
+@
+
+The JAGS model is:
+
+<<>>=
+# Data as a list
+a.dat <- list( y=newcomb, I=length(newcomb) )
+# Inits as a list of lists
+a.ini <- list( list( alpha=20, sigma=8 ),
+               list( alpha=23, sigma=10 ),
+               list( alpha=26, sigma=12 ) )
+
+# Names of the parameters to monitor
+a.par <- c("alpha","sigma" )
+@
+
+<<>>=
+# The bugs-code for the model
+cat( "model
+      {
+      for( i in 1:I )
+         {
+         y[i] ~ dnorm(mu[i],tau)
+         mu[i] <- alpha
+         }
+      alpha ~ dnorm(0, 1.0E-6)
+      sigma ~ dunif(0,100)
+      tau  <- 1/pow(sigma,2)
+      }",
+      file="JAGSmodels/light.jag" )
+@
+
+
+<<>>=
+library(rjags)
+a.mod <- jags.model( file = "JAGSmodels/light.jag",
+                   data = a.dat,
+               n.chains = 3,
+                  inits = a.ini,
+                n.adapt = 20000,
+                quiet=T)
+
+
+# Sampling from the posterior
+a.res <- coda.samples( a.mod,
+                         var = a.par,
+                      n.iter = 20000,
+                        thin = 10 )
+@
+
+
+And here are the results:
+
+<<>>=
+summary(a.res)
+@
+
+\section{Model checking}
+
+Gelman et al 2014 say (p.\ 143):
+
+\begin{quote}
+If [I guess they mean: if and only if] the model fits, then replicated data generated under the model should look similar to observed data. \dots the observed data should look plausible under the posterior predictive distribution.
+\end{quote}
+
+We will follow Gelman et al and track the distribution of the minimum values under the posterior predictive distribution.
+Let's modify the code to track (properties of) posterior predictions:
+
+<<>>=
+a.par <- c("alpha","sigma", "smallest","mn")
+# The jags code for the model
+cat( "model
+      {
+      for( i in 1:I )
+         {
+         y[i] ~ dnorm(mu[i],tau)
+         mu[i] <- alpha
+     ##generates predicted values: 
+         y.pred[i] ~ dnorm(mu[i],tau)
+         }
+      alpha ~ dnorm(0, 1.0E-6)
+      sigma ~ dunif(0,100)
+      tau  <- 1/pow(sigma,2)
+      smallest <- min(y.pred)
+      mn <- mean(y.pred)
+      }",
+      file="JAGSmodels/light2.jag" )
+@
+
+The posterior distribution from this model will turn out to not reflect the observed data. We can change the model from normal to t-distribution with df=2 to model extreme values. 
+
+<<>>=
+cat( "model
+      {
+      for( i in 1:I )
+         {
+         y[i] ~ dt(mu[i],tau,2)
+         mu[i] <- alpha
+     ##GENERATES predicted values:      
+         #y.pred[i] ~ dnorm(mu[i],tau)
+          y.pred[i] ~ dt(mu[i],tau,2)
+         }
+      alpha ~ dnorm(0, 1.0E-6)
+      sigma ~ dunif(0,100)
+      tau  <- 1/pow(sigma,2)
+      smallest <- min(y.pred)
+      mn <- mean(y.pred)
+      }",
+      file="JAGSmodels/tdistrlight2.jag" )
+@
+
+Here are the models and posterior samples for the two models above.
+
+<<>>=
+# Model compilation:
+a.mod <- jags.model( file = "JAGSmodels/light2.jag",
+                   data = a.dat,
+               n.chains = 3,
+                  inits = a.ini,
+                n.adapt = 20000,
+                quiet=T)
+
+a.res <- coda.samples( a.mod,
+                         var = a.par,
+                      n.iter = 40000,
+                        thin = 10 )
+@
+
+<<echo=F>>=
+## Fixing the distribution
+# Model compilation:
+a.mod.t <- jags.model( file = "JAGSmodels/tdistrlight2.jag",
+                   data = a.dat,
+               n.chains = 3,
+                  inits = a.ini,
+                n.adapt = 20000,
+                quiet=T)
+
+a.res.t <- coda.samples( a.mod.t,
+                         var = a.par,
+                      n.iter = 40000,
+                        thin = 10 )
+@
+
+<<>>=
+summary(a.res)
+@
+
+The distribution of the minimum values in the posterior predictive distribution compared with the observed distribution:
+
+<<echo=F>>=
+M<-as.matrix(a.res.t)
+colnames(M)
+
+densityplot(M[,4])
+@
+
+<<fig=T,echo=F>>=
+output<-as.data.frame(as.matrix(a.res.t))
+
+hist(newcomb,freq=FALSE,breaks=50,ylim=c(0,0.25))
+lines(density(output$smallest))
+lines(density(output$mn),col="red",lwd=4)
+@
+
+You can see that the t-distribution with df=2 has fatter tails than a normal distribution, and as a result models the extreme values observed.
+
+<<>>=
+## a smoothing function needed below:
+kdeq3m.fun <- function(x, mult = 2,mainlab)
+{ iq <- IQR(x)
+wid <- mult * iq
+n <- length(x)
+plot(density(x, width = wid), xlab = "x", ylab = "", type = "l",main=mainlab)
+rug(x)
+out <- list(Sample.size = n, IQR = iq, Smoothing.par = wid)
+#out 
+}
+@
+
+<<fig=T,echo=F>>=
+op<-par(mfrow=c(1,2),pty="s")
+x<-rt(10000,df=2)
+## defined above:
+kdeq3m.fun(x,mainlab="t-distrn. df=2")
+x<-rnorm(10000)
+kdeq3m.fun(x,mainlab="N(0,1)")
+@
+
+\section{Model checking with raw reading times (Gibson and Wu data)}
+
+Fit the Gibson and Wu data using \textbf{raw reading times} as your dependent variable. \textbf{Fit a varying intercepts model only (no varying slopes)}.
+
+Obtain the distribution of the \textbf{largest} values from the posterior predictive distribution and find out whether this distribution of largest values is realistic given the data.
+
+%% not relevant anymore:
+%Some hints: The initial values have high values; the priors for the variance components should either have upper bounds that allow such values, or  the init values should have lower starting values. Here is the solution for using the given init values (not really sensible as the upper bounds are not realistic):
+
+
+%\begin{enumerate}
+%\item $sigma.e  \sim dunif(0,2000)$
+%\item $sigma.u  \sim dunif(0,500)$
+%\item $sigma.w  \sim dunif(0,500)$
+%\end{enumerate}
+
+Here is a solution to this task:
+
+<<>>=
+data<-read.table("data/gibsonwu2012data.txt",header=T)
+## head(data)
+data$so <- ifelse(
+  data$type%in%c("subj-ext"),-0.5,0.5)
+
+library(lme4)
+summary(m1 <- lmer(rt~so+(1|item)+(1|subj),
+          subset(data,region=="headnoun")))
+
+(sigma.u<-as.integer(attr(VarCorr(m1)$subj,"stddev")))
+(sigma.w<-as.integer(attr(VarCorr(m1)$item,"stddev")))
+
+## estimated residual sd:
+(sigma.e<-as.integer(attr(VarCorr(m1),"sc")))
+
+(beta<-fixef(m1))
+
+headnoun<-subset(data,region=="headnoun")
+
+headnoun.dat <- list(subj=
+                sort(as.integer( 
+                      factor(headnoun$subj) )),
+                     item=
+                       sort(as.integer( 
+                        factor(headnoun$item) )),
+                   rt = headnoun$rt,
+                    so = headnoun$so,
+                    N = nrow(headnoun),
+                    I = 
+                    length( unique(headnoun$subj) ),
+                    K = 
+                    length( unique(headnoun$item) )  
+                      )
+
+## data for another model, separate models for SR and OR:
+hnoun.sr<-subset(headnoun,type=="subj-ext")
+hnoun.or<-subset(headnoun,type=="obj-ext")
+N.sr<-dim(hnoun.sr)[1]## 272
+N.or<-dim(hnoun.or)[1]## 275
+
+headnoun.separate<-rbind(hnoun.sr,hnoun.or)
+
+headnounsep.dat <- list(subj=
+                sort(as.integer( 
+                      factor(headnoun.separate$subj) )),
+                     item=
+                       sort(as.integer( 
+                        factor(headnoun.separate$item) )),
+                   rt = headnoun.separate$rt,
+                    so = headnoun.separate$so,
+                    N = nrow(headnoun.separate),
+                    I = 
+                    length( unique(headnoun.separate$subj) ),
+                    K = 
+                    length( unique(headnoun.separate$item) ),
+                    N.sr=N.sr,
+                    N.or=N.or
+                      )
+
+
+## random initial values:
+gen.inits<-function(s){
+  init<-rnorm(1,mean=s,sd=50)
+  round(abs(init),digits=0)
+}
+
+gen.inits.beta<-function(b){
+  k<-length(b)
+  store<-rep(NA,k)
+  for(i in 1:k){
+  init<-rnorm(1,mean=b[i],sd=50)
+  store[i]<-init
+  }
+  round(store,digits=0)
+}
+
+## testing:
+#gen.inits.beta(beta)
+#gen.inits(sigma.e)
+
+generate<-function(){
+  list( sigma.e = gen.inits(sigma.e),
+        sigma.u = gen.inits(sigma.u),
+        sigma.w = gen.inits(sigma.w),    
+        beta = gen.inits.beta(beta))
+}
+
+headnoun.ini <- list(generate(),
+                     generate(),
+                     generate(),
+                     generate())
+
+
+cat("
+# Fixing data to be used in model definition
+model
+   {
+   # The model for each observational unit 
+  #   (each row is a subject's data point)
+     for( j in 1:N )
+     {
+     mu[j] <- beta[1] + beta[2] * ( so[j] )  + u[subj[j]] + w[item[j]]
+     rt[j] ~ dnorm( mu[j], tau.e )
+ 
+    ##generate predicted values: 
+     rt.pred[j] ~ dnorm(mu[j],tau.e)
+     }
+
+   # Random effects for each subject
+     for( i in 1:I )
+     {
+     u[i] ~ dnorm(0,tau.u)
+     }
+
+     # Random effects for each item
+     for( k in 1:K )
+     {
+     w[k] ~ dnorm(0,tau.w)
+     }
+  
+   # Uninformative priors:
+     
+   # Fixed effect intercept and slope
+     beta[1] ~ dnorm(0.0,1.0E-5)
+     beta[2] ~ dnorm(0.0,1.0E-5)
+
+   # Residual (within-person) variance
+     tau.e <- pow(sigma.e,-2)
+     sigma.e  ~ dunif(0,1000)
+
+   # Between-person variation
+     tau.u <- pow(sigma.u,-2)
+     sigma.u  ~ dunif(0,500)   
+
+     # Between-item variation
+     tau.w <- pow(sigma.w,-2)
+     sigma.w  ~ dunif(0,500) 
+    
+    ## track predicted values:
+    smallest <- min(rt.pred)
+    mn      <- mean(rt.pred)
+    largest  <- max(rt.pred)
+    
+   }",
+     file="JAGSmodels/rtgwheadnouncrossedrandom.jag" )
+
+
+## model with separate generating functions for SRs and ORs:
+cat("
+# Fixing data to be used in model definition
+model
+   {
+  # Residual (within-person) variance
+     tausr.e <- pow(sigmasr.e,-2)
+     tauor.e <- pow(sigmaor.e,-2)
+     sigmasr.e  ~ dunif(0,1000)
+     sigmaor.e  ~ dunif(0,1000)
+ 
+   # The model for each observational unit 
+  #   (each row is a subject's data point)
+     for( j in 1:N )
+     {
+     mu[j] <- beta[1] + beta[2] * ( so[j] )  + u[subj[j]] + w[item[j]]   
+    
+    ##generate predicted values: 
+     #rt.pred[j] ~ dnorm(mu[j],tausr.e)
+     }
+    for(s in 1:N.sr){
+    rt[s] ~ dnorm( mu[s], tausr.e)
+    }
+    for(r in (N.sr+1):(N.sr+N.or)){
+    rt[r] ~ dnorm( mu[r], tauor.e)
+    }
+
+   # Random effects for each subject
+     for( i in 1:I )
+     {
+     u[i] ~ dnorm(0,tau.u)
+     }
+
+     # Random effects for each item
+     for( k in 1:K )
+     {
+     w[k] ~ dnorm(0,tau.w)
+     }
+  
+   # Uninformative priors:
+     
+   # Fixed effect intercept and slope
+     beta[1] ~ dnorm(0.0,1.0E-5)
+     beta[2] ~ dnorm(0.0,1.0E-5)
+
+  
+   # Between-person variation
+     tau.u <- pow(sigma.u,-2)
+     sigma.u  ~ dunif(0,500)   
+
+     # Between-item variation
+     tau.w <- pow(sigma.w,-2)
+     sigma.w  ~ dunif(0,500) 
+    
+    ## track predicted values:
+  #  smallest <- min(rt.pred)
+  #  mn      <- mean(rt.pred)
+  #  largest  <- max(rt.pred)
+   }",
+     file="JAGSmodels/rtgwheadnouncrossedrandomsep.jag" )
+
+## version 2: with t distribution
+## model with separate generating functions for SRs and ORs:
+cat("
+# Fixing data to be used in model definition
+model
+   {
+  # Residual (within-person) variance
+     tausr.e <- pow(sigmasr.e,-2)
+     tauor.e <- pow(sigmaor.e,-2)
+     sigmasr.e  ~ dunif(0,1000)
+     sigmaor.e  ~ dunif(0,1000)
+ 
+   # The model for each observational unit 
+  #   (each row is a subject's data point)
+     for( j in 1:N )
+     {
+     mu[j] <- beta[1] + beta[2] * ( so[j] )  + u[subj[j]] + w[item[j]]   
+    
+    ##generate predicted values: 
+     #rt.pred[j] ~ dnorm(mu[j],tausr.e)
+     }
+    for(s in 1:N.sr){
+    #rt[s] ~ dnorm( mu[s], tausr.e)
+    ## truncated t-distribution with df=2
+    rt[s] ~ dt( mu[s], tausr.e,2) T(0,)
+    }
+    for(r in (N.sr+1):(N.sr+N.or)){
+    #rt[r] ~ dnorm( mu[r], tauor.e)
+    rt[r] ~ dt( mu[r], tauor.e,2) T(0,)
+    }
+
+   # Random effects for each subject
+     for( i in 1:I )
+     {
+     u[i] ~ dnorm(0,tau.u)
+     }
+
+     # Random effects for each item
+     for( k in 1:K )
+     {
+     w[k] ~ dnorm(0,tau.w)
+     }
+  
+   # Uninformative priors:
+     
+   # Fixed effect intercept and slope
+     beta[1] ~ dnorm(0.0,1.0E-5)
+     beta[2] ~ dnorm(0.0,1.0E-5)
+
+  
+   # Between-person variation
+     tau.u <- pow(sigma.u,-2)
+     sigma.u  ~ dunif(0,500)   
+
+     # Between-item variation
+     tau.w <- pow(sigma.w,-2)
+     sigma.w  ~ dunif(0,500) 
+    
+    ## track predicted values:
+  #  smallest <- min(rt.pred)
+  #  mn      <- mean(rt.pred)
+  #  largest  <- max(rt.pred)
+   }",
+     file="JAGSmodels/rtgwheadnouncrossedrandomsept.jag" )
+
+## ex-gaussian:
+cat("
+# Fixing data to be used in model definition
+model
+   {
+  # Residual (within-person) variance
+     tau.e ~ dgamma(0.001,0.001)
+## tau.e = 1/sigma.e^2
+## sigma.e^2 = 1/tau.e
+## sigma.e = 1/tau.e^{1/2}
+#     tau.e <- pow(sigma.e,-2)
+#     sigma.e  ~ dunif(0,100)
+      sigma.e <- pow(tau.e,-0.5)
+ 
+   # The model for each observational unit 
+  #   (each row is a subject's data point)
+     for( j in 1:N )
+     {
+     mu[j] <- beta[1] + beta[2] * ( so[j] )  + u[subj[j]] + w[item[j]]   
+    
+    ##generate predicted values: 
+     #rt.pred[j] ~ dnorm(mu[j],tausr.e)
+     }
+    for(s in 1:N.sr){
+     ex[s] ~ dexp(rate.sr) ## rate is 1/lambda.sr
+     mn[s] <- mu[s] + ex[s]
+     rt[s] ~ dnorm(mn[s],tau.e)T(0,)
+    }
+    for(r in (N.sr+1):(N.sr+N.or)){
+     ex[r] ~ dexp(rate.or) ## rate is 1/lambda.or
+     mn[r] <- mu[r] + ex[r]
+     rt[r] ~ dnorm(mn[r],tau.e)T(0,)
+    }
+
+   # Random effects for each subject
+     for( i in 1:I )
+     {
+     u[i] ~ dnorm(0,tau.u)
+     }
+
+     # Random effects for each item
+     for( k in 1:K )
+     {
+     w[k] ~ dnorm(0,tau.w)
+     }
+  
+   # Uninformative priors:
+     
+   # Fixed effect intercept and slope
+     beta[1] ~ dnorm(0.0,1.0E-5)
+     beta[2] ~ dnorm(0.0,1.0E-5)
+
+  
+   # Between-person variation
+#     tau.u <- pow(sigma.u,-2)
+#     sigma.u  ~ dunif(0,100)   
+      tau.u ~ dgamma(0.001,0.001)
+      sigma.u <- pow(tau.u,-0.5)
+
+     # Between-item variation
+#     tau.w <- pow(sigma.w,-2)
+#     sigma.w  ~ dunif(0,100) 
+      tau.w ~ dgamma(0.001,0.001)
+      sigma.w <- pow(tau.w,-0.5) 
+    
+    ## priors for rates:
+    rate.sr ~ dgamma(0.001,0.001)
+    rate.or ~ dgamma(0.001,0.001)
+
+    ## track predicted values:
+  #  smallest <- min(rt.pred)
+  #  mn      <- mean(rt.pred)
+  #  largest  <- max(rt.pred)
+   }",
+     file="JAGSmodels/rtgwheadnouncrossedrandomexg.jag" )
+
+## ex-gaussian version 2, priors on sds are unif:
+cat("
+# Fixing data to be used in model definition
+model
+   {
+    # The model for each observational unit 
+  #   (each row is a subject's data point)
+     for( j in 1:N )
+     {
+     mu[j] <- beta[1] + beta[2] * ( so[j] )  + u[subj[j]] + w[item[j]]   
+    }
+    for(s in 1:N.sr){
+     ex[s] ~ dexp(rate.sr) ## rate is 1/lambda.sr
+     mn[s] <- mu[s] + ex[s]
+     rt[s] ~ dnorm(mn[s],tau.e)T(0,)
+    }
+    for(r in (N.sr+1):(N.sr+N.or)){
+     ex[r] ~ dexp(rate.or) ## rate is 1/lambda.or
+     mn[r] <- mu[r] + ex[r]
+     rt[r] ~ dnorm(mn[r],tau.e)T(0,)
+    }
+
+   # Random effects for each subject
+     for( i in 1:I )
+     {
+     u[i] ~ dnorm(0,tau.u)
+     }
+
+     # Random effects for each item
+     for( k in 1:K )
+     {
+     w[k] ~ dnorm(0,tau.w)
+     }
+  
+   # Uninformative priors:
+     
+   # Fixed effect intercept and slope
+     beta[1] ~ dnorm(0.0,1.0E-5)
+     beta[2] ~ dnorm(0.0,1.0E-5)
+
+  # Residual (within-person) variance
+     tau.e <- pow(sigma.e,-2)
+     sigma.e  ~ dunif(0,1000)
+  
+   # Between-person variation
+     tau.u <- pow(sigma.u,-2)
+     sigma.u  ~ dunif(0,200)   
+
+     # Between-item variation
+     tau.w <- pow(sigma.w,-2)
+     sigma.w  ~ dunif(0,200) 
+      
+    ## priors for rates:
+    rate.sr ~ dgamma(0.001,0.001)
+    rate.or ~ dgamma(0.001,0.001)
+
+    ## track predicted values:
+  #  smallest <- min(rt.pred)
+  #  mn      <- mean(rt.pred)
+  #  largest  <- max(rt.pred)
+   }",
+     file="JAGSmodels/rtgwheadnouncrossedrandomexgv2.jag" )
+
+## visualizing the ex-gaussian:
+samp<-rep(NA,10000)
+for(i in 1:10000){
+ex<-rexp(1,0.001)
+#ex<-0
+mn<-rnorm(1,mean=500,sd=40)
+samp[i]<-ex+mn
+}
+hist(samp)
+
+## visualizing the t-distribution:
+samp<-rep(NA,10000)
+for(i in 1:10000){
+samp[i]<-500+rt(1,df=2)
+}
+hist(samp)
+
+
+
+track.variables<-c("beta","sigma.e",
+                   "sigma.u","sigma.w","smallest","mn","largest")
+
+track.variables.sep<-c("beta","sigmasr.e","sigmaor.e",
+                   "sigma.u","sigma.w")
+
+track.variables.exg<-c("beta","sigma.e",
+                   "sigma.u","sigma.w","rate.sr","rate.or")
+
+library(rjags)
+headnoun.mod <- jags.model( 
+  file="JAGSmodels/rtgwheadnouncrossedrandom.jag",
+  data = headnoun.dat,
+  n.chains = 4,
+#  inits = headnoun.ini,
+  n.adapt =5000, quiet=T)
+
+headnoun.mod.sep <- jags.model( 
+  file="JAGSmodels/rtgwheadnouncrossedrandomsep.jag",
+  data = headnounsep.dat,
+  n.chains = 4,
+  n.adapt =5000, quiet=T)
+
+headnoun.mod.sept <- jags.model( 
+  file="JAGSmodels/rtgwheadnouncrossedrandomsept.jag",
+  data = headnounsep.dat,
+  n.chains = 4,
+  n.adapt =5000, quiet=T)
+
+headnoun.mod.exg <- jags.model( 
+  file="JAGSmodels/rtgwheadnouncrossedrandomexg.jag",
+  data = headnounsep.dat,
+  n.chains = 4,
+  n.adapt =20000, quiet=T)
+
+headnoun.mod.exgv2 <- jags.model( 
+  file="JAGSmodels/rtgwheadnouncrossedrandomexgv2.jag",
+  data = headnounsep.dat,
+  n.chains = 4,
+  n.adapt =2000, quiet=T)
+
+headnoun.res <- coda.samples(headnoun.mod,
+                var = track.variables,
+                n.iter = 10000,
+                thin = 20 )
+
+summary(headnoun.res)$statistics[2,1:2]
+summary(headnoun.res)$quantiles[2,c(1,3,5)]
+
+
+
+headnounsep.res <- coda.samples(headnoun.mod.sep,
+                var = track.variables.sep,
+                n.iter = 10000,
+                thin = 20 )
+
+headnounsept.res <- coda.samples(headnoun.mod.sept,
+                var = track.variables.sep,
+                n.iter = 10000,
+                thin = 20 )
+
+headnounexg.res <- coda.samples(headnoun.mod.exg,
+                var = track.variables.exg,
+                n.iter = 40000,
+                thin = 20 )
+
+
+headnoun.mod.exgv2 <- jags.model( 
+  file="JAGSmodels/rtgwheadnouncrossedrandomexgv2.jag",
+  data = headnounsep.dat,
+  n.chains = 4,
+  n.adapt =50000, quiet=T)
+
+headnounexgv2.res <- coda.samples(headnoun.mod.exgv2,
+                var = track.variables.exg,
+                n.iter = 100000,
+                thin = 100 )
+
+gelman.diag(headnounexgv2.res)
+
+plot(headnounexgv2.res)
+
+summary(headnounexgv2.res)
+
+## Gelman-Rubin convergence diagnostic:
+#gelman.diag(headnoun.res)
+
+plot(headnoun.res)
+
+plot(headnounsep.res)
+
+plot(headnounsept.res)
+
+plot(headnounexg.res)
+
+gelman.diag(headnounsep.res)
+gelman.diag(headnounsept.res)
+
+gelman.diag(headnounexg.res)
+
+summary(headnounsep.res)$statistics[2,1:2]
+summary(headnounsep.res)$quantiles[2,c(1,3,5)]
+
+summary(headnounsept.res)$statistics[2,1:2]
+summary(headnounsept.res)$quantiles[2,c(1,3,5)]
+
+summary(headnounexg.res)$statistics[,1:2]
+summary(headnounexg.res)$quantiles[,c(1,3,5)]
+
+
+summary(lmer(rt~so+(1|subj)+(1|item),headnoun))
+
+mcmcChain <- as.matrix( headnoun.res )
+
+## max:
+hist(mcmcChain[,3],xlim=c(0,8000))
+abline(v=max(data$rt))
+
+#summary(headnoun$rt)
+@
+
+Incidentally, an error message you might see in the Gibson and Wu varying intercepts and slopes model when using the Gelman-Rubin convergence diagnostic:
+
+\begin{verbatim}
+Error in chol.default(W) : 
+  the leading minor of order 3 is not positive definite
+\end{verbatim}
+
+This message occurs because two of the parameters being monitored are highly correlated. 
+
+Just set multivariate=FALSE in the gelman.diag function. 
+
+Another problem is convergence failure.
+The solution to this is supposed to be easy: run longer simulations. Following Gelman et al (2014), we discard the first half of all simulations as burn in (Gelman et al call it warm up). I will add a lot more detail on convergence failure in a later version of these notes.
+%%to-do add more here.
+
+Here is an exercise:
+Try to find out how good the model fit is using the negative reciprocal reading time and the distribution of the maximum value from the posterior predictive distribution. 
+
+<<echo=F,eval=F>>=
+## solution
+data<-read.table("data/gibsonwu2012data.txt",header=T)
+## convert to reciprocal rt:
+data$rrt<- -1000/data$rt
+## head(data)
+data$so <- ifelse(
+  data$type%in%c("subj-ext"),-0.5,0.5)
+
+cat("
+# Fixing data to be used in model definition
+data
+   {
+   zero[1] <- 0
+   zero[2] <- 0
+   R[1,1] <- 0.1
+   R[1,2] <- 0
+   R[2,1] <- 0
+   R[2,2] <- 0.5
+   }
+# Then define model
+model
+   {
+   # Intercept and slope for each person, including random effects
+     for( i in 1:I )
+     {
+     u[i,1:2] ~ dmnorm(zero,Omega.u)
+     }
+    
+         # Random effects for each item
+     for( k in 1:K )
+     {
+     w[k] ~ dnorm(0,tau.w)
+     }
+
+   # Define model for each observational unit
+     for( j in 1:N )
+     {
+     mu[j] <- ( beta[1] + u[subj[j],1] ) +
+              ( beta[2] + u[subj[j],2] ) * ( so[j] ) + w[item[j]]
+     rrt[j] ~ dnorm( mu[j], tau.e )
+    ##generate predicted values: 
+     rrt.pred[j] ~ dnorm(mu[j],tau.e)
+     }
+
+   # Priors:
+
+   # Fixed intercept and slope (uninformative)
+     beta[1] ~ dnorm(0.0,1.0E-5)
+     beta[2] ~ dnorm(0.0,1.0E-5)
+          
+   # Residual variance
+     tau.e <- pow(sigma.e,-2)
+   sigma.e  ~ dunif(0,100)
+
+   # Define prior for the variance-covariance matrix of the random effects for subjects
+     Sigma.u <- inverse(Omega.u)
+     Omega.u  ~ dwish( R, 2 )
+    
+    # Between-item variation
+     tau.w <- pow(sigma.w,-2)
+     sigma.w  ~ dunif(0,10)   
+     
+    ## track predicted values:
+    smallest <- min(rrt.pred)
+    mn      <- mean(rrt.pred)
+    largest  <- max(rrt.pred)
+    
+   }",
+     file="JAGSmodels/gwintslopeuninf.jag" )
+
+headnoun<-subset(data,region=="headnoun")
+
+headnoun$region<-factor(headnoun$region)
+
+headnoun.dat <- list(subj = 
+              sort(as.integer(factor(headnoun$subj))),
+                      item = 
+              sort(as.integer(factor(headnoun$item))),
+                    rrt = headnoun$rrt,
+                    so = headnoun$so,
+                    N = nrow(headnoun),
+                    I = length(unique(headnoun$subj)),
+                    K = length(unique(headnoun$item)))
+library(lme4)
+m2<-lmer(rrt~so+(so|subj)+(1|item),headnoun)
+
+( sigma.e <- attr(VarCorr(m2),"sc") )
+## Precision matrix, inverse of VarCorr mat:
+( Omega.u <- solve( VarCorr(m2)$subj ) )
+(sigma.w<-attr(VarCorr(m2)$item,"stddev"))
+( beta    <- fixef( m2 ) )
+
+headnoun.ini <- list( list( sigma.e = sigma.e/3,
+                         Omega.u = Omega.u/3,
+                            sigma.w = sigma.w/3,
+                            beta = beta   /3 ),
+                   list( sigma.e = sigma.e*3,
+                         Omega.u = Omega.u*3,
+                         sigma.w = sigma.w*3,
+                            beta = beta   *3 ),
+                   list( sigma.e = sigma.e/3,
+                         Omega.u = Omega.u*3,
+                         sigma.w = sigma.w/3,
+                            beta = beta   /3 ),
+                   list( sigma.e = sigma.e*3,
+                         Omega.u = Omega.u/3,
+                         sigma.w = sigma.w*3,
+                            beta = beta   *3 ) )
+library(rjags)
+headnoun.mod <- jags.model(
+                file = "JAGSmodels/gwintslopeuninf.jag",
+                data = headnoun.dat,
+                n.chains = 4,
+                inits = headnoun.ini,
+                n.adapt = 20000 ,quiet=T)            
+
+track.variables<-c("beta","sigma.e","Sigma.u","sigma.w","smallest","mn","largest")
+
+headnoun.res <- coda.samples( headnoun.mod,
+                                 var = track.variables,
+                              n.iter = 40000,
+                                thin = 20 )
+
+#summary( headnoun.res )
+
+#gelman.diag(headnoun.res,multivariate=F)
+par( mfrow=c(3,3) )
+plot(headnoun.res)
+@
+
+\section{Modeling in the raw reading time scale, assuming a Cauchy distribution for errors}
+
+To be elaborated on later.
+
+<<>>=
+data<-read.table("data/gibsonwu2012data.txt",header=T)
+## convert to reciprocal rt:
+data$rrt<- -1000/data$rt
+## contrast coding:
+data$so <- ifelse(
+  data$type%in%c("subj-ext"),-0.5,0.5)
+
+## reference values from lmer:
+library(lme4)
+(m1 <- lmer(rrt~so+(1|subj),
+            subset(data,region=="headnoun")))
+
+headnoun<-subset(data,region=="headnoun")
+
+## Stan ready data:
+headnoun.dat <- list(subj=
+                    sort(as.integer( 
+                    factor(headnoun$subj) )),
+                    item=sort(as.integer( 
+                         factor(headnoun$item) )),
+                     rrt = headnoun$rt,
+                     so = headnoun$so,
+                     N = nrow(headnoun),
+                     I = 
+                       length( unique(headnoun$subj) ),
+                     K = 
+                       length( unique(headnoun$item) )  
+)
+
+## Stan code:
+varying.int_code<-'
+  data {
+int<lower=1> N; //no. of rows
+real so[N];     // predictor
+real rrt[N];   //outcome
+int<lower=1> I;   //number of subjects
+int<lower=1, upper=I> subj[N];  //subject id
+int<lower=1> K;   //number of items
+int<lower=1, upper=K> item[N];  //item id
+}
+parameters {
+real alpha;      // intercept
+real beta;       // slope
+real u[I];   // random intercept subj
+real w[K];   // random intercept item
+real<lower=0> sigma_e;  // residual variance 
+real<lower=0> sigma_u;   //  subject var
+real<lower=0> sigma_w;   //  item var
+}
+model {
+real mu[N];
+for (i in 1:N) {
+mu[i] <- alpha + beta*so[i] + u[subj[i]]+w[item[i]];
+}
+rrt ~ cauchy(mu,sigma_e);    // likelihood
+alpha ~ normal(0,800); // was 5
+beta ~ normal(0,300); // was 5
+u ~ normal(0,sigma_u);
+w ~ normal(0,sigma_w);
+## could have used uniform:
+sigma_u ~ cauchy(0,300);
+sigma_w ~ cauchy(0,300);
+sigma_e ~ cauchy(0,800);
+}
+'
+
+fit <- stan(model_code = varying.int_code, 
+            data = headnoun.dat, 
+            iter = 500, chains = 2)
+
+mcmcChain<-as.matrix(fit)
+
+hist(mcmcChain[,2])
+
+#plot(fit)
+@
