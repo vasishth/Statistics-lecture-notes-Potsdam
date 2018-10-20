@@ -49,7 +49,7 @@
 % The line below defines the location of figures generated while compiling
 % (This file will create this directory automatically, see code chunk
 % ``init'' below. 
-\SweaveOpts{prefix.string=figures/lecturesfig}
+%\SweaveOpts{prefix.string=figures/lecturesfig}
 
 \SweaveOpts{cache=TRUE}
 
@@ -60,7 +60,7 @@
 \setkeys{Gin}{width=\textwidth}
 
 \author{Taught by Shravan Vasishth [vasishth@uni-potsdam.de]}
-\title{An introduction to statistical data analysis (Summer 2014)\\ Lecture notes}
+\title{An introduction to statistical data analysis (Winter 2018)\\ Lecture notes}
 \date{Last edited: \today}
 \maketitle
 
@@ -81,19 +81,9 @@ options(SweaveHooks=list(fig=function() par(bg="white", fg="black")))
 #load("MAS473.Rdata")
 @
 
-\SweaveInput{lecture1.Rnw}
+\SweaveInput{01introduction.Rnw}
 %%SDSM
-\SweaveInput{lecture2.Rnw}
-%%Power
-\SweaveInput{lecture3.Rnw}
-%%ANOVA: not taught in the course
-\SweaveInput{lecture4linmod.Rnw}
-\SweaveInput{review1.Rnw}
-\SweaveInput{review2.Rnw}
-\SweaveInput{review3.Rnw}
-\SweaveInput{review4.Rnw}
-\SweaveInput{review5.Rnw}
-\SweaveInput{solutions.Rnw}
+\SweaveInput{02RepeatedSampling.Rnw}
 
 
 %\include{appendix}
