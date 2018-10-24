@@ -271,6 +271,31 @@ qqPlot(res.m0)
 \label{fig:residuals}
 \end{figure}
 
+A straightforward solution we will consider later is a log-transform of the reading times.
+
+<<>>=
+m0log<-lm(log(rt)~cond,aggregated_data)
+summary(m0log)
+@
+
+Notice two things that changed. First, our significant effect is no longer significant.
+This is because the effect we found above was driven by a few extreme values. Of course, if we had done the analysis correctly (treating the data as paired, as it should be), we would have obtained a significant effect:
+
+<<>>=
+t.test(log(OR)-log(SR))
+@
+
+
+
+
+Second, the residuals are now much more normal---model assumptions are met much better than when we analyzed the raw reading times.
+
+<<>>=
+qqPlot(residuals(m0log))
+@
+
+Subjects 33 and 37 seem to show interestingly extreme behavior; a topic we will return to later in the next chapter.
+
 \subsubsection{How the coefficient estimates are computed}
 
 Underlyingly, R uses a design matrix or model matrix, which is being used by R to estimate the coefficients:
@@ -531,6 +556,7 @@ plot(effect,pow,type="l",
 This concludes our introduction to linear models when we have an experiment with a factorial design (here, two conditions).
 Next, we consider the case where we have a continuous predictor.
 
+
 \section{A linear model with a continuous predictor}
 
 In our relative clause example, the predictor is categorial. What about when we have continuous predictors. An example is  instructors' beauty levels measured on a continuous scale as predictors of their teaching evaluations? Beauty levels are centered; this means that a beauty level of 0 means average beauty level. This is a data set from a paper by 
@@ -565,13 +591,19 @@ summary(m3)
 
 The intercept tells you the estimated mean teaching evaluation when the beauty level (the predictor) has value 0---which is the average ``beauty'' level among these professors. The slope tells you the estimated increase in teaching evaluation when beauty level is increased by 1 unit.
 
+The residuals are roughly normal. Two influential values are marked. You should check what happens if you remove them.
+
+<<>>=
+qqPlot(residuals(m3))
+@
+
 \subsection{Does beauty level affect evaluation?}
 
 If you look at the p-value in model m3 above, it is clear that we can reject the null hypothesis that beauty level doesn't affect evaluation. But this doesn't mean the effect is real, and it doesn't mean there is a causal link between beauty and evaluations (there could be, it just isn't necessarily so). For one thing, the plot of evaluation against beauty looks very noisy: the points are widely spread out. 
 
-And if power is low, the significant estimate is exaggerated. Suppose the true effect was half of 0.133. Power would be remarkably low:
+And if power is low, the significant estimate is guaranteed to be exaggerated. Suppose the true effect were half of 0.133. Power would be remarkably low. Let's compute power for this scenario.
 
-(I got the sd in the calculation below by looking at the SE of the effect of beauty. $SE=0.03218=s/\sqrt{461}$. So, s=0.69.)
+I got the sd in the calculation below by looking at the SE of the effect of beauty. $SE=0.03218=s/\sqrt{461}$. So, s=0.69.
 
 <<>>=
 power.t.test(d=0.133/2,sd=0.69,n=461,type="two.sample")
@@ -656,6 +688,15 @@ for(i in 1:nsim){
 mean(pvals<0.05)
 @
 
+\item In the above scenario where the true value is 0.07, what is the sampling distribution of the mean going to look like? How much overestimation are we going to get in repeated sampling?
+
+<<>>=
+hist(savecoef[,2],freq=FALSE,
+     xlab="estimates",
+     main="Sampling distribution of\n beauty effect")
+abline(v=0.07,col="red")
+@
+
 \item When power is as low as 40\%, how exaggerated will significant effects be?
 
 <<>>=
@@ -665,5 +706,7 @@ abline(v=0.07,col="red")
 
 \end{enumerate}
 
-Fake data simulation will prove very helpful in evaluating how realistic the model is, and whether we have any chance of detecting accurate estimates of an effect.
+The answers to all the above questions are telling us that there's not much to say here about the effect of beauty on evaluation. The study is underpowered, and so even if the effect turns out significant, it will be based on overestimates of the effect.
+
+In the next chapter, fake data simulation will prove very helpful in evaluating how realistic the model is, and whether we have any reasonable chance of detecting accurate estimates of an effect.
 
