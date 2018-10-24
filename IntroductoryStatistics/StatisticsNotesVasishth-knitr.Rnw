@@ -83,15 +83,18 @@ show.signif.stars=FALSE)
 @
 
 
-<<'child-01introduction.Rnw', child='01introduction-knitr.Rnw'>>=
+<<'child-01introduction', child='01introduction-knitr.Rnw'>>=
 @
 
 %%SDSM
 
-<<'child-02RepeatedSampling.Rnw', child='02RepeatedSampling-knitr.Rnw'>>=
+<<'child-02RepeatedSampling', child='02RepeatedSampling-knitr.Rnw'>>=
 @
 
-<<'child-03TrueFalseDiscoveryRate.Rnw', child='03TrueFalseDiscoveryRates-knitr.Rnw'>>=
+<<'child-03TrueFalseDiscoveryRate', child='03TrueFalseDiscoveryRates-knitr.Rnw'>>=
+@
+
+<<'child-04LinearModeling', child='04LinearModeling-knitr.Rnw'>>=
 @
 
 
