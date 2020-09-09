@@ -1,0 +1,17 @@
+\chapter{Solutions}
+
+\section{Quiz 1 solutions}
+
+\begin{enumerate}
+\item b
+\item b
+\item b
+\item d
+\item d
+\item a
+\item d
+\item a
+\item b
+\item a
+\item c
+\end{enumerate}

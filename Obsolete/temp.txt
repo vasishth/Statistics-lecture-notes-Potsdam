@@ -1,0 +1,13 @@
+\SweaveInput{lecture1.Rnw}
+%%SDSM
+\SweaveInput{lecture2.Rnw}
+%%Power
+\SweaveInput{lecture3.Rnw}
+%%ANOVA: not taught in the course
+\SweaveInput{lecture4linmod.Rnw}
+\SweaveInput{review1.Rnw}
+\SweaveInput{review2.Rnw}
+\SweaveInput{review3.Rnw}
+\SweaveInput{review4.Rnw}
+\SweaveInput{review5.Rnw}
+\SweaveInput{solutions.Rnw}

@@ -1,0 +1,1581 @@
+\chapter{Sampling distribution of sample mean}
+
+
+\section{The normal distribution}
+
+A typical situation in linguistic research involves collecting reading times or reaction times in a particular experiment to answer a specific research question.   For example, I might want to know whether subject relatives (SRs) are read faster than object relatives (ORs) in a population of speakers (say 
+English speakers). To find this out, I would get randomly selected participants to read SRs and ORs; the details of experiment design will be discussed later. Right now, all that matters is that if I do such an experiment, I will get a difference in reading times between SRs and ORs for each participant. Suppose I have 100 participants, and I know the difference in OR vs SR reading times, in seconds. We can simulate this situation in R. We could have 100 data points, each representing a difference in means between subject and object relatives seen by each subject (synonymous here with participant). 
+
+<<>>=
+x<-rnorm(100)
+head(x)
+@ 
+
+This is a (simulated) \textbf{sample}; we could have taken a different sample from the population of English speakers. You can simulate that by running the above code again.
+
+The sample we did take comes from a \textbf{population} of speakers. Note that, for theoretical reasons we won't go into, it is important to take a \textbf{random sample}. In practice, this is not really the case---we just take the university students who are willing to come do the experiment. This is likely to introduce a bias in our results, in that the result is probably going to not be representative of the population. This is a limitation of the way we do experiments in psycholinguistics and psychology.
+
+As mentioned above, each value in the above simulated sample represents one participant's response. A positive value means that the OR was read more slowly than the SR. If we plot the distribution of this sample's values, then we will see that it has roughly a ``bell-shaped distribution'':
+
+\begin{figure}
+<<fig=TRUE>>=
+## plot density histogram:
+hist(x,freq=F)
+@
+\caption{A histogram of the sample data.}\label{hist1}
+\end{figure}
+Notice that most of the values are centered around 0, some are as big as \Sexpr{round(max(x),digits=0)}, and some are as small as \Sexpr{round(min(x),digits=0)}. 
+
+It turns out that a lot of very convenient theory can be built around this distribution. Since normal distribution theory is so fundamental to what we do in linguistics, I am going to focus on better understanding this one distribution.
+
+The following function is defined as the normal density function:
+
+\begin{equation}
+f(x,\mu,\sigma) = \frac{1}{\sigma \sqrt{2 \pi}} \exp^{-((x - \mu)^2/2 \sigma^2)}
+\end{equation}
+
+Given a range of values for $x$, and specific values for $\mu$, and $\sigma$, we can
+plot the result of applying this function. 
+Since the function is defined by two values or \textbf{parameters}, we can write it in shorthand as follows:
+$N(\mu,\sigma)$, i.e., a normal distribution with some mean and some standard deviation. Statisticians usually write $N(\mu,\sigma^2)$, i.e., they use the variance $\sigma^2$ rather than the standard deviation $\sigma$; but we will ignore the statisticians' convention in this course, because in R we define the density function in terms of standard deviation. (But you should keep in mind that statisticians tend to define the normal distribution in terms of variance.)
+
+We can define the probability density function in R as follows, setting mu and sigma to 0 and 1 respectively, for convenience (you could have set it to anything):
+
+<<>>=
+## mean and sigma set at 0 and 1 by default:
+normal.density.function <- function(x,mu=0,sigma=1){
+  1/(sqrt(2*pi)*sigma)*exp(-((x - mu)^2/(2*sigma^2)))}
+@
+
+You can plot the shape of this distribution using the following command:
+
+\begin{verbatim}
+plot(function(x) normal.density.function(x), -3, 3,
+      main = "Normal density function",ylim=c(0,.4),
+              ylab="density",xlab="X")
+\end{verbatim}
+
+\begin{figure}
+<<fig=TRUE,echo=F>>=
+plot(function(x) normal.density.function(x), -3, 3,
+      main = "Normal density function",ylim=c(0,.4),
+              ylab="density",xlab="X")
+@
+\caption{Plotting the normal distribution.}\label{norm1}
+\end{figure}
+
+R has a built-in function, \texttt{dnorm} that does the job of the function we defined above; we could just have used that built-in function:
+
+<<fig=TRUE>>=
+plot(function(x) dnorm(x), -3, 3,
+      main = "Normal density",ylim=c(0,.4),
+              ylab="density",xlab="X")
+@
+
+One important property of this function is that it stretches from -Infinity to +Infinity. We don't display this on the plot, hopefully it is obvious why not. Another important property is that it represents the probability of each of the x-axis values, and so the total probability of all possible values, stretching from all the way from -Infinity to +Infinity will be 1. You can calculate the total probability by summing up all the probabilities of all possible values. The function \texttt{integrate} does that summation for you:
+
+<<>>=
+integrate(function(x) dnorm(x, mean = 0, sd = 1), -Inf, +Inf)
+@
+
+This will be our only brush with calculus in this course. The key point here is that it allows us to calculate the area under the curve given any lower and upper bound. For example, I could calculate the area under the curve between -2 and +2:
+
+<<>>=
+integrate(function(x) dnorm(x, mean = 0, sd = 1), -2, +2)
+@
+
+Why am I talking about calculating the area under the curve? It turns out we need this capability a lot in statistical data analysis, as you are about to discover in this lecture. 
+
+\section{The area under the curve in a normal distribution}
+
+We begin by establishing a fundamental fact about any normal
+distribution: 95\% of the probability lies within approximately 2 standard deviations (SDs) from the
+mean. If we sum the area under these curves, between 2 SD below
+the mean and 2 SD above the mean, we find the following areas, which
+correspond to the amount of probability within these bounds. 
+
+We can display this fact graphically (see Figure~\ref{fig:normal2SD}):
+
+<<label=normal2SD,include=FALSE>>=
+## plot multiple figures:
+## replace ugly par... specification with 
+## something easier to remember:
+multiplot <- function(row,col){
+     par(mfrow=c(row,col),pty="s")
+   }
+
+main.title<-"Area within 2 SD of the mean"
+
+multiplot(1, 2)
+plot(function(x) dnorm(x, mean = 0, sd = 1), 
+xlim=c(-3, 3),main="SD 1",xlab="x",ylab="",cex=2)
+segments(-2, 0, -2, 0.4)
+segments(2, 0, 2, 0.4)
+
+plot(function(x) dnorm(x, mean = 0, sd = 4), 
+xlim=c(-12, 12),main="SD 4",xlab="x",ylab="",cex=2)
+segments(-8, 0, -8, 0.1)
+segments(8, 0, 8, 0.1)
+@
+
+\begin{figure}[!htbp]
+  \centering
+<<fig=TRUE,width=12,echo=FALSE>>=
+<<normal2SD>>
+@ 
+  \caption{Two normal distributions with SD $=1$ (left), SD $=4$ (right). The lines delimit the region 2 SD from the mean in each case.}
+  \label{fig:normal2SD}
+\end{figure}
+
+There is a built-in R function, \texttt{pnorm}, for computing probabilities within a range; (so we don't really need the integrate function, I just used it initially to show that we are really doing a summation over continuous values). Here are some examples of \texttt{pnorm} in action. Here, we use the default values of \texttt{pnorm} for mean and standard deviation, but you could have had any mean or standard deviation: 
+
+<<>>=
+## Prob. of getting 2 or less:
+pnorm(2) 
+
+## Prob. of getting more than 2:
+1-pnorm(2) 
+
+## Prob. of getting -2 or less:
+pnorm(-2) 
+
+## Prob. of being between -2 and 2:
+pnorm(2)-pnorm(-2)
+@
+
+You will sometimes need to know the following: given a normal distribution with a particular mean and standard deviation, what is the boundary marking x\% of the area under the curve (usually centered around the mean value). For example, 
+the command \texttt{pnorm(2)-pnorm(-2)} gives us the area between -2 and 2 in a normal distribution with mean 0 and sd=1, and the area is \Sexpr{prob<-round(pnorm(2)-pnorm(-2),digits=4)} (I will freely switch between percentages and proportions for probability; don't get confused!). Suppose we only knew the area (probability) that we want to have under the curve, and want to know the bounds  that mark that area.
+We actually know that the bounds are -2 and 2 here, but we will pretend we don't know and need to find this out.
+How to do this?
+Grade 3 arithmetic comes to the rescue: The total area under the curve is 1. We want the lower and upper bounds for the area 
+\Sexpr{prob}. This means that
+
+\begin{equation}
+1-\Sexpr{prob}= \Sexpr{1-prob}
+\end{equation}
+
+\noindent 
+is the area outside the (as yet unknown) bounds. Since the normal density curve is symmetrical, that means that each of the two sides outside the boundaries we want to discover has area 
+
+\begin{equation}
+\frac{\Sexpr{1-prob}}{2}=\Sexpr{(1-prob)/2}
+\end{equation}
+
+So: there is some lower bound with area \Sexpr{(1-prob)/2} to the \textbf{left} of it (i.e., in the lower tail), and some upper bound with area \Sexpr{(1-prob)/2} to the \textbf{right} of it (i.e., in the upper tail). We are pretending right now that we don't know that lower=-2 and upper=2; we are engaging in this pretence because we will be in situations soon where we don't know these values and have to discover them given some probability range. R allows you to ask: ``what is the bound, for a given distribution, such that the probability to the left of it is some value p1, or what is the bound such that the probability to the right of it is some value p2?'' 
+The function that gives this answer is called \texttt{qnorm}, and here is how we can use to answer our current question:
+
+<<>>=
+## figure out area between the unknown bounds:
+prob<-round(pnorm(2)-pnorm(-2),digits=4)
+## figure out lower bound:
+(lower<-qnorm((1-prob)/2,mean=0,sd=1,lower.tail=T))
+## figure out upper bound:
+(upper<-qnorm((1-prob)/2,mean=0,sd=1,lower.tail=F))
+@
+
+And so we discover what we expected: the lower bound is -2 and the upper bound is 2.
+
+It \textbf{always} helps to visualize what we are doing:
+
+<<fig=TRUE>>=
+plot(function(x) dnorm(x, mean = 0, sd = 1), 
+xlim=c(-4, 4),main="mean 1, SD 1",xlab="x",ylab="",cex=2)
+segments(-2, 0, -2, 0.1)
+segments(2, 0, 2, 0.1)
+text(0,.05,"probability=0.9545")
+text(-3,.05,"lower tail")
+text(-3,.005,"probability=0.02275")
+text(3,.05,"upper tail")
+text(3,.005,"probability=0.02275")
+@
+
+The skills we just learnt give us tremendous capability, as you will see in the rest of this chapter.
+
+\section{Repeated sampling}
+
+Suppose now that we have a population of people and that we know the age
+of each individual; let us assume also that distribution of the ages
+is approximately normal.
+Finally, let us also suppose that we know that mean age of the
+population is 60 years and the population SD is 4 years.
+
+Now suppose that we \textbf{repeatedly} sample from this population: we take
+samples of 40, a total of 1000 times; and we calculate the mean $\bar{x}$ each time
+we take a sample. After taking 1000 samples, we have 1000 means; if we
+plot the distribution of these means, we have the \textbf{sampling
+distribution of the sample mean}.
+
+<<>>=
+#1000 samples of 40 taken repeatedly:
+sample.means <- rep(NA,1000)
+for(i in 1:1000){
+  sample.40 <- rnorm(40,mean=60,sd=4)
+  sample.means[i] <- mean(sample.40)
+}
+@ 
+
+We can calculate the mean and standard deviation of this sampling distribution:
+
+<<print=TRUE>>=
+means40<-mean(sample.means)
+sd40<-sd(sample.means)
+@ 
+
+If we plot this distribution of means, we find that it is roughly
+normal. 
+
+<<label=sdsmplot40,include=FALSE>>=
+hist(sample.means)
+@
+
+We can characterize the distribution of means visually, as
+done in Figure~\ref{fig:sdsmplot40} below, or in terms of the mean and
+standard deviation of the distribution. The mean value in
+the above simulation is \Sexpr{round(mean(sample.means),digits=2)} and the
+standard deviation of the distribution of means is
+\Sexpr{round(sd(sample.means),digits=4)}. Note that if you repeatedly run the above simulation code, 
+these numbers will differ slightly in each run.
+
+
+\begin{figure}[!htbp]
+  \centering
+<<fig=TRUE,echo=FALSE>>=
+<<sdsmplot40>> 
+@   
+  \caption{The sampling distribution of the sample mean with 1000 samples
+    of size 40.}
+  \label{fig:sdsmplot40}
+\end{figure}
+
+Consider now the situation where our sample size is 100. Note that the
+mean and standard deviation of the population ages is the same as
+above.
+
+<<>>=
+sample.means <- rep(NA,1000)
+
+for(i in 1:1000){
+  sample.100 <- rnorm(100,mean=60,sd=4)
+  sample.means[i] <- mean(sample.100)
+}
+
+@ 
+
+<<print=TRUE>>=
+means100 <- mean(sample.means)
+sd100 <- sd(sample.means)
+@ 
+
+
+In this particular simulation run, the mean of the means is
+\Sexpr{format(means100,digits=2)} 
+and the standard deviation of the
+distribution of means is \Sexpr{format(sd100,digits=4)}. Let's plot
+the distribution of the means (Figure~\ref{fig:sdsmplot100}).
+
+<<label=sdsmplot100,include=FALSE>>=
+hist(sample.means)
+@
+
+\begin{figure}[!htbp]
+\centering
+<<fig=TRUE,echo=FALSE>>=
+<<sdsmplot100>>
+@ 
+\caption{The sampling distribution of the sample mean with samples of size
+100.} \label{fig:sdsmplot100}
+\end{figure}
+
+The above simulations show us several things. First, the standard
+deviation of the distribution of means gets smaller as we increase
+sample size.  When the sample size is 40, the standard deviation is
+\Sexpr{format(sd40,digits=4)}; when it is 100, the standard deviation
+is \Sexpr{format(sd100,digits=4)}.  Second, as the sample size is
+increased, the mean of the sample means 
+becomes a better and better estimate of the
+\textit{population} mean $\mu_{\bar{x}}$.  A third point (which is not obvious at the
+moment) is that there is a lawful relationship between the standard
+deviation $\sigma$ of the population and the standard deviation of the
+\textit{distribution of means}, which we will call $\sigma_{\bar{x}}$. 
+%(Technically, this should be $\sigma_{\bar{X}}$, where $\bar{X}$ is a random variable. I will come to this later.) 
+This relationship is:
+
+\begin{equation} \label{sigmabar}
+\sigma_{\bar{x}} = \frac{\sigma}{\sqrt{n}}
+\end{equation}
+
+\noindent
+Here, $n$ is the sample size.  It is possible to derive equation
+\ref{sigmabar} from first principles, but for that we need a bit more theory, which won't cover in this course (see Kerns).
+Here, we simply note the important point that $n$ is in the denominator in this equation, so there is an inverse relationship between the sample size and the standard deviation of the sample means.
+Let's take this equation on trust for the moment and use it to compute
+$\sigma_{\bar{x}}$ by using the population standard deviation (which
+we assume we know). Let's do this for a sample of size 40 and another of size
+100:
+
+<<>>=
+4/sqrt(40)
+4/sqrt(100)
+@ 
+
+\noindent
+The above calculation is consistent with what we just saw: $\sigma_{\bar{x}}$ gets smaller and
+smaller as we increase sample size.
+
+We have also introduced a notational convention that we will use
+throughout the notes: \index{sample statistic}sample statistics are symbolized by Latin letters
+($\bar{x}, s$); \index{population parameter}population parameters are symbolized by Greek letters
+($\mu, \sigma$).
+
+\section{The \index{Central Limit Theorem}Central Limit Theorem}
+
+We will see now that the \textit{sampling
+distribution of the sample mean} is also normally distributed. In the above example the means were
+drawn from a population with normally distributed scores.  It
+turns out that the sampling distribution of the sample mean will be
+normal even if the population is not normally distributed, as long as
+the sample size is large enough and the distribution we are sampling from has a mean. This is known as the Central Limit
+Theorem:
+
+\begin{quote}
+When sampling from a population that has a mean,	
+  provided the sample size is large enough, the sampling distribution
+  of the sample mean will be close to normal regardless of the shape of the population distribution.
+\end{quote}
+
+[Note: Note the caveat ``When sampling from a population that has a mean''. There are some distributions which do not have a mean; but in this course we will ignore these. More advanced textbooks on probability discuss these distributions.]
+
+Let's check whether this theorem holds
+by testing it in a case where our population is not normally distributed.
+Let's take our samples from
+a population (Figure~\ref{fig:exppopulation}) whose values are distributed exponentially with the same
+mean of 60 (the mean of an \index{distribution, exponential}\textsc{exponential distribution} is the reciprocal of the so-called `rate' parameter).
+
+<<label=exppopulation,include=FALSE>>=
+sample.100 <- rexp(100, 1/60)
+hist(sample.100)
+@
+
+
+\begin{figure}[!htbp]
+  \centering
+<<fig=TRUE,echo=FALSE>>=
+<<exppopulation>>
+@   
+  \caption{A sample from exponentially distributed population scores.}
+  \label{fig:exppopulation}
+\end{figure}
+
+Now let us plot the sampling distribution of the sample mean. We take
+1000 samples of size 100 each from this exponentially distributed
+population.
+As shown in Figure~\ref{fig:exponentialsdsm}, the distribution of the means is again (more or less) normal.
+
+<<label=exponentialsdsm,include=FALSE>>=
+sample.means <- rep(NA,1000)
+
+for(i in 1:1000){ 
+	sample.100 <- rexp(100, 1/60)
+	sample.means[i] <- mean(sample.100)
+}
+
+hist(sample.means)
+@
+
+\noindent
+Recall that the mean of each sample is a point estimate of the
+true mean of the population. Some of these samples will have a mean slightly above
+the true mean, some slightly below, and the sampling distribution of
+\emph{these} values is roughly normal.  Try altering the sample size
+in this example to get a feel for what happens if the sample size is
+not `large enough.'
+
+To summarize:
+
+\begin{enumerate}
+\item The sampling distribution of the sample mean is normal for large sample sizes. 
+\item The mean of the sampling distribution of the sample mean is (in
+  the limit) the same as the population mean.
+\item It follows from the above two facts that the mean of a sample is
+  a good estimate of the population mean.
+\end{enumerate}
+
+\begin{figure}[!htbp]
+  \centering
+<<fig=TRUE,echo=FALSE>>=
+<<exponentialsdsm>>
+@  
+  \caption{The sampling distribution of sample mean from an exponentially distributed population.}  \label{fig:exponentialsdsm}
+\end{figure}
+
+\section{$\sigma$ and $\sigma_{\bar{x}}$}
+
+We saw earlier that the standard deviation of the sampling
+distribution of the sample mean $\sigma_{\bar{x}}$ gets
+smaller as we increase sample size. When the sample has size 40, this
+standard deviation is \Sexpr{format(sd40,digits=4)}; when it
+is 100, this standard deviation is
+\Sexpr{round(sd100,digits=4)}.
+
+Let's study the relationship between $\sigma_{\bar{x}}$ and $\sigma$.
+Recall that our population mean $\mu$ = 60, $\sigma$ = 4.  The equation below
+summarizes the relationship; it shouldn't surprise you, since we just
+saw it above:
+
+\begin{equation}
+\sigma_{\bar{x}} = \frac{\sigma}{\sqrt{n}}
+\end{equation}
+
+But note also that the ``tighter'' the distribution, the lower the variance about the true population mean.  So the $\sigma_{\bar{x}}$  is an
+indicator of how good our estimate of the population mean is.
+As we increase the size of a single sample, the smaller the standard
+deviation of its corresponding sampling distribution becomes. This brings us to the 95\% confidence interval.
+
+\section {The 95\% Confidence Interval for the Sample Mean}
+
+Let's take a sample of 11 ages from a normally distributed population
+with known mean age $\mu = 60$ years and SD $\sigma = 4$ years.
+
+<<print=TRUE>>=
+sample.11 <- rnorm(11,mean=60,sd=4)
+@ 
+
+We know the mean here, but let's pretend we don't.
+Let's estimate a population mean from this sample using the sample
+mean $\bar{x}$, and compute the SD $\sigma_{\bar{x}}$ of the corresponding sampling distribution. 
+Since we know the
+true population standard deviation we can get a precise value
+for $\sigma_{\bar{x}}$. We don't need to estimate the SD or the $\sigma_{\bar{x}}$.
+So, we have an estimate of the true mean, but we know the exact  $\sigma_{\bar{x}}$.
+
+
+<<print=TRUE>>=
+estimated.mean <- mean(sample.11)
+SD.population <- 4 
+n <- length(sample.11)
+SD.distribution <- SD.population/sqrt(n)
+@
+
+We know from the Central Limit Theorem that the sampling distribution
+of the sample mean is roughly normal, and we know that in this case 
+$\sigma_{\bar{x}} =$ \Sexpr{format(SD.distribution,digits=2)}.  
+Note that if we repeatedly sample from this population, our sample mean will change slightly each time, but the $\sigma_{\bar{x}}$ is not going to change. Why is that?
+
+
+It turns out that the probability that the population mean is within $2\times 
+\sigma_{\bar{x}}$ of the sample mean is a bit over $0.95$. Let's
+calculate this range, $2\times 
+\sigma_{\bar{x}}$:
+
+\begin{align}
+\bar{x} \pm (2 \times \sigma_{\bar{x}}) & = \hbox{\Sexpr{format(estimated.mean,digits=2)}} \pm (2 \times \hbox{\Sexpr{format(SD.distribution,digits=4)}}) 
+\end{align}
+
+The 0.95 probability region is between
+\Sexpr{format(estimated.mean-2*SD.distribution,digits=3)} and
+\Sexpr{format(estimated.mean+2*SD.distribution,digits=3)}.  The probability region we compute is centered around the \textbf{estimated} mean. If we repeatedly sample from this population, we will get different sample means each time, but the width of the interval would remain identical if we use the exact $\sigma_{\bar{x}}$ value we computed above. That means that under repeated sampling, the location of the mean and therefore the location of the probability region will vary. 
+
+The key thing to understand here is that probability region is centered around the \textbf{sample} mean, which will vary with each sample even if we sample from a population with a given distribution with a specific mean and standard deviation.
+
+%The probability region is called the 95\% \index{confidence interval}confidence interval (CI).
+
+Suppose now that sample size was four times bigger (44). Let's again
+calculate the sample mean, the standard deviation of the corresponding 
+sampling distribution, and from this information,
+compute the 95\% confidence interval. First, we need to compute $\sigma_{\bar{x}}$:
+
+<<>>=
+sample.44 <- rnorm(44,mean=60,sd=4)
+estimated.mean <- mean(sample.44)
+n <- length(sample.44)
+(SD.distribution <- SD.population/sqrt(n))
+@ 
+
+Now we get a much tighter 95\% confidence interval:
+
+\begin{align}
+\bar{x} \pm 2 \times \sigma_{\bar{x}} & = \hbox{\Sexpr{format(estimated.mean,digits=2)}} \pm 2 \times \hbox{\Sexpr{format(SD.distribution,digits=4)}} 
+\end{align}
+
+The interval now is between \Sexpr{format(estimated.mean-2*SD.distribution,digits=3)}
+and \Sexpr{format(estimated.mean+2*SD.distribution,digits=3)}, smaller
+than the one we got for the smaller sample size.
+In fact, it is exactly half as wide. Take a moment to make sure you understand why.
+
+\section{Realistic Statistical Inference}
+
+Until now we have been sampling from a population whose mean and
+standard deviation we know. However, we normally don't know the
+population parameters. In other words, although we know that:
+
+\begin{equation}
+\sigma_{\bar{x}} = \frac{\sigma}{\sqrt{n}}
+\end{equation}
+
+\noindent
+when we take samples in real life, we usually don't know $\sigma$. 
+After all, it is based on an average of squared distances from the population mean $\mu$, and that is usually the very thing we are trying to estimate!
+
+What we \emph{do} have, however, is the standard deviation \emph{of the sample itself} (denoted $s$). This in turn means that we can only get an \textit{estimate} of
+$\sigma_{\bar{x}}$.  
+This is called the \index{standard error}\textsc{standard error} (SE) or estimated standard error of the 
+  sample mean:
+\begin{equation}
+SE_{\bar{x}} = \frac{s}{\sqrt{n}}
+\end{equation}
+
+Pay careful attention to the distinction between $s$ (an estimate of the standard deviation of the population
+$\sigma$) and $SE_{\bar{x}}$ (an estimate of the standard deviation of the sampling distribution, which is in turn based on $s$).  
+
+We saw previously that the size of $\sigma_{\bar{x}}$---a measure of the spread of the sampling distribution---is crucial in determining the size of a 95\% confidence interval for a particular sample. Now we only have an estimate of that spread. Moreover, the estimate will change from sample to sample, as the value of $s$ changes. This introduces a new level of uncertainty into our task: the quantity $\sigma_{\bar{x}}$ has become an estimate based on an estimate! Intuitively, we would expect the confidence interval to increase in size, reflecting this increase in uncertainty. We will see how to quantify this intuition presently.
+
+First, however, we should explore the pattern of variability in this new statistic we have introduced, $s$, which (like the sample mean) will vary randomly from sample to sample. Can we safely assume
+that $s$ is a reliable estimate of $\sigma$? 
+
+\section{$s^2$ provides a good estimate of $\sigma^2$}
+
+Earlier in this chapter we repeatedly sampled from a population of
+people with mean age 60 years and standard deviation 4 years; then we plotted the
+distribution of sample means that resulted from the repeated samples.
+One thing we noticed was that the sample means tended to be clustered around the value corresponding to the population mean (60).
+Let's repeat this experiment, but this time we plot the distribution
+of the samples' variances 
+(Figure~\ref{fig:varsample}). 
+
+<<label=varsample,include=FALSE>>=
+sample.var <- rep(NA,1000)
+for(i in c(1:1000)){
+  sample.40 <- rnorm(40,mean=60,sd=4)
+  sample.var[i] <- var(sample.40)
+}
+hist(sample.var)
+@
+
+
+
+\begin{figure}[!htbp]
+  \centering
+<<fig=TRUE,echo=FALSE>>=
+sample.var <- rep(NA,1000)
+for(i in c(1:1000)){
+  sample.40 <- rnorm(40,mean=60,sd=4)
+  sample.var[i] <- var(sample.40)
+}
+hist(sample.var)
+
+@   
+  \caption{The distribution of the sample variance,
+    sample size 40.}
+  \label{fig:varsample}
+\end{figure}
+
+Figure~\ref{fig:varsample} shows that the sample variances $s^2$ tend to cluster around the population variance (16). 
+%This is related to the fact that $s^2$ is an \index{unbiased estimator}\textsc{unbiased estimator} of $\sigma^2$. 
+This is true even if  we have an exponentially distributed population whose variance is 1 (Figure~\ref{fig:varsampleexp}).
+
+<<label=varsampleexp,include=FALSE>>=
+sample.var <- rep(NA,1000)
+for(i in c(1:1000)){
+  sample.var[i] <- var(rexp(40))
+}
+hist(sample.var)
+@
+
+\begin{figure}[!htbp]
+  \centering
+<<fig=TRUE,echo=FALSE>>=
+sample.var <- rep(NA,1000)
+for(i in c(1:1000)){
+  sample.var[i] <- var(rexp(40))
+}
+hist(sample.var)
+@   
+  \caption{The sampling distribution of sample variances from an exponentially distributed population.}
+  \label{fig:varsampleexp}
+\end{figure}
+
+%Now, although $s^2$ is a good estimate of $\sigma^2$, $s$ is not a very good estimator of $\sigma$ (see \cite{lehmann1998theory}). Nevertheless,
+We use the square root of the sample variance  $s$ as an estimate of the unknown population standard
+deviation $\sigma$. This in turn allows us to estimate the standard deviation of the sampling distribution $\sigma_{\bar{x}}$ using the Standard Error $SE_{\bar{x}}$.
+
+Notice that the Standard Error will vary from sample to sample, since the estimate $s$ of the population parameter $\sigma$ will vary from sample to sample. And of course, as the sample size increases the estimate $s$ becomes more accurate, as does the SE, suggesting that the uncertainty introduced by this extra layer of estimation will be more of an issue for smaller sample sizes.
+
+Our problem now is that 
+the sampling distribution of the sample mean will take the estimate $s$ from the sample, not $\sigma$, as a parameter.
+If we were to derive some value $v$ for the SE, and simply plug this in to the normal distribution for the sample statistic, this would be equivalent to claiming that $v$ \emph{really was} the population parameter $\sigma$.
+
+What we require is a distribution whose shape has greater uncertainty built into it than
+the normal distribution. This is the motivation for using the so-called
+t-\textsc{distribution}, which we turn to next.
+
+\section{The \index{t-distribution}t-distribution}
+
+As discussed above, the distribution we use with an estimated $s$ needs to reflect greater uncertainty at small sample sizes. There is in fact a family of t-distribution curves whose shapes vary with sample size. In the limit, if the sample were the size of the entire population, the t-distribution would \emph{be} the normal distribution (since then $s$ would \emph{be} $\sigma$), so the t-curve becomes more like the normal distribution in shape as sample size increases.
+This t-distribution is formally defined by the \textsc{degrees of freedom} (which is simply sample size
+minus 1 in this case; we won't worry too much about what degrees of freedom means at this stage) and has more of the total probability located in
+the tails of the distribution. It follows that the probability of a sample mean being close to the true mean is slightly lower when measured by this distribution, reflecting our
+greater uncertainty. You can see this effect in Figure~\ref{fig:tversusnorm} at small sample sizes:
+
+<<label=tversusnorm,include=FALSE>>=
+range <- seq(-4,4,.01)  
+ 
+multiplot(2,2)
+
+ for(i in c(2,5,15,20)){
+   plot(range,dnorm(range),type="l",lty=1,
+        xlab="",ylab="",
+        cex.axis=1)
+   lines(range,dt(range,df=i),lty=2,lwd=1)
+   mtext(paste("df=",i),cex=1.2)
+ }
+@
+
+\begin{figure}[!htbp]
+  \centering
+<<fig=TRUE,echo=FALSE>>=
+<<tversusnorm>>
+
+@ 
+  
+  \caption{A comparison between the normal (solid line) and t-distribution (broken line) for different degrees of freedom.}
+  \label{fig:tversusnorm}
+\end{figure}
+
+\noindent
+But notice
+that with about 15 degrees of freedom, the t-distribution is
+already very close to normal.
+
+The formal definition of the t-distribution is as follows:
+Suppose we have a random sample of size $n$, say of reading times (RTs), and these RTs come from a $N(\mathtt{mean}=\mu,\,\mathtt{sd}=\sigma)$ distribution. Then the quantity 
+
+\begin{equation}
+T=\frac{\overline{X}-\mu}{S/\sqrt{n}}
+\end{equation}
+
+has a $\mathsf{t}(\mathtt{df}=n-1)$ sampling distribution. The distribution is defined as ($r$ is degrees of freedom; see below):
+
+\begin{equation}
+f_{X}(x,r)=\frac{\Gamma[(r+1)/2]}{\sqrt{r\pi}\ \Gamma(r/2)}\left(1+\frac{x^{2}}{r}\right)^{-(r+1)/2},\quad -\infty < x < \infty.
+\end{equation}
+
+[$\Gamma$ refers to the gamma function; in this course we can ignore what this is, but read Kerns if you are interested.]
+
+The $t$ distribution is defined by its $r=n-1$ degrees of freedom, and we will write that the sample scores are coming from $\mathsf{t}(\mathtt{df}=r)$. The shape of the function for the t distribution is similar to the normal, but the tails are considerably heavier for small sample sizes.  As with the normal distribution, there are four functions in $\mathsf{R}$ associated with the $t$ distribution, namely \texttt{dt}, \texttt{pt}, \texttt{qt}, and \texttt{rt}, which behave like \texttt{dnorm}, \texttt{pnorm}, \texttt{qnorm}, and \texttt{rnorm}, except for the t-distribution instead of the normal.
+
+\bigskip
+
+What do we have available to us to work with now? We have an estimate
+$s$ of the population SD, and so an estimate $SE_{\bar{x}}$ of the SD
+of the sampling distribution:
+\begin{equation}
+SE_{\bar{x}} = \frac{s}{\sqrt{n}}
+\end{equation}
+
+We also have a more spread-out distribution than the normal (at least for smaller sample sizes), the
+t-distribution, defined by the degrees of freedom (sample size minus 1).  We are
+now ready to do realistic statistical inference.
+
+
+\section{The \index{t-test}One-sample t-test}
+
+%How do we build a confidence interval based on this new model of inference?
+
+We start by taking a random sample of
+11 peoples' ages from a population with mean age 60 years and standard deviation 4 years.
+
+<<>>=
+sample <- rnorm(11,mean=60,sd=4)
+@ 
+
+\noindent
+%Using this sample, we can compute something very useful called a ``t-value'' by using a built-in t-test function:
+
+%We could have done this ``by hand'':
+
+%We'll just get back to what this t-value tells us.
+We can  
+ask for the  95\% confidence interval, which (we saw this earlier) is \textit{roughly} two times the Standard Error:
+
+<<print=TRUE>>=
+t.test(sample)$conf.int
+@ 
+
+
+
+Note that all of the information required to calculate this t-value is contained in the sample itself: the sample mean; the sample size and sample standard deviation $s$ (from which we compute the SE), the degrees of freedom (the sample size minus 1, from which we reference the appropriate t-distribution).
+Sure enough, if our sample size had been larger, our CI would be narrower:
+
+<<>>=
+sample <- rnorm(100,mean=60,sd=4)
+@
+
+<<print=TRUE>>=
+t.test(sample)$conf.int
+@ 
+
+%What about the t-value? Is it likely to be smaller if we increase sample size?
+
+Given the specific sample values you get by running the above command that results in the object \texttt{sample}, try to reproduce this confidence interval by hand.  Do this after the lecture for this chapter has been presented.
+
+
+\section{Some Observations on Confidence Intervals} \label{confidenceintervals}
+
+\label{trickypoint}
+\index{confidence interval}
+There are some subtleties associated with confidence intervals that
+are often not brought up in elementary discussions, simply because the
+issues are just too daunting to tackle. However, we will use
+simulations to unpack some of these subtleties. The issues are in reality quite simple.
+
+The first critical point to understand is the meaning of the
+confidence interval. 
+Is the 95\%
+confidence interval telling you the range within which we are 95\% sure
+that the population mean lies? No!
+
+Notice
+is that the range defined by the confidence interval will vary with
+each sample even if the sample size is kept constant. The reason is
+that the sample mean will vary each time, and the standard deviation will
+vary too. We can check this fact quite easily.
+
+First we define a function for computing 95\% CIs:\footnote{Here, we use the built-in R function called \texttt{qt(p,DF)} which, for a given confidence-interval range (say, 0.975), and a given degrees of freedom, DF, tells you the corresponding critical t-value.}
+
+<<>>=
+
+se <- function(x)
+      {
+        y <- x[!is.na(x)] # remove the missing values, if any
+        sqrt(var(as.vector(y))/length(y))
+}
+
+
+ci <- function (scores){
+m <- mean(scores,na.rm=TRUE)
+stderr <- se(scores)
+len <- length(scores)
+upper <- m + qt(.975, df=len-1) * stderr 
+lower <- m + qt(.025, df=len-1) * stderr 
+return(data.frame(lower=lower,upper=upper))
+}
+@ 
+
+\noindent
+
+Next, we take 100 samples repeatedly from a population with mean 60 and SD 4, computing the 95\% CI each time.
+
+<<>>=
+
+lower <- rep(NA,100)
+upper <- rep(NA,100)
+
+for(i in 1:100){ 
+  sample <- rnorm(100,mean=60,sd=4)
+  lower[i] <- ci(sample)$lower
+  upper[i] <- ci(sample)$upper
+}
+  
+cis <- cbind(lower,upper)
+
+head(cis)
+@ 
+
+
+Thus, the center and the size of any one confidence interval, based on a single
+sample, will depend on the
+particular sample mean and standard deviation you happen to observe for
+that sample.  The sample mean and standard deviation 
+are good estimates the population mean and standard
+deviation, but they are ultimately just estimates of these true
+parameters.
+
+Importantly, because of the shapes of the distribution of
+sample means and the variances, if we
+repeatedly sample from a population and compute the confidence
+intervals each time, approximately 95\% \textbf{of the confidence
+intervals} will contain the population mean. In
+the other 5\% or so of the cases, the confidence intervals
+will not contain the population mean. 
+
+This is what `the' 95\% confidence
+interval means: it's a statement about confidence intervals computed with hypothetical repeated samples.
+More specifically, it's a statement about the probability that the hypothetical confidence intervals (that would be computed
+from the hypothetical repeated samples) will contain the population mean. I know that the meaning of the CI a very weird thing. But that's what it means, and our job right now is to understand this concept correctly.
+
+So let's check the above statement. We can repeatedly build 95\% CIs and
+determine whether the population mean lies within them. The claim is
+that the population mean will be in 95\% of the CIs.
+
+<<>>=
+store <- rep(NA,100)
+
+pop.mean<-60
+pop.sd<-4
+
+for(i in 1:100){ 
+  sample <- rnorm(100,mean=pop.mean,sd=pop.sd)
+  lower[i] <- ci(sample)$lower
+  upper[i] <- ci(sample)$upper
+  if(lower[i]<pop.mean & upper[i]>pop.mean){
+    store[i] <- TRUE} else {
+      store[i] <- FALSE}
+}
+
+## need this for the plot below:
+cis <- cbind(lower,upper)
+
+
+## convert store to factor:
+store<-factor(store)
+
+summary(store)
+@ 
+
+
+So that's more or less true. 
+To drive home the point, we can also plot the confidence intervals to visualize the proportion of cases where each CI contains the population mean (Figure~\ref{repeatedCIsplot}). 
+
+<<label=repeatedCIsplot,include=FALSE>>=
+main.title<-"95% CIs in 100 repeated samples"
+
+line.width<-ifelse(store==FALSE,2,1)
+cis<-cbind(cis,line.width)
+x<-0:100
+y<-seq(55,65,by=1/10)
+plot(x,y,type="n",xlab="i-th repeated sample",ylab="Scores",main=main.title)
+abline(60,0,lwd=2)
+x0<-x
+x1<-x
+arrows(x0,y0=cis[,1],
+       x1,y1=cis[,2],length=0,lwd=cis[,3])
+@
+
+In this figure, we control the width of the lines marking the CI using the information we extracted above (in the object \texttt{store}) to determine whether the population mean is contained in the CI or not: when a CI does not contain the population mean, the line is thicker than when it does contain the mean.
+You should try repeatedly sampling from the population as we did above, computing the lower and upper ranges of the 95\% confidence interval, and then plotting the results as shown in Figure~\ref{repeatedCIsplot}.
+
+
+\begin{figure}
+<<fig=TRUE,echo=FALSE>>=
+<<repeatedCIsplot>>
+@
+\caption{A visualization of the proportion of cases where the
+  population mean is contained in the 95\% CI, computed from repeated samples. The CIs that do not contain the population mean are marked with thicker lines.}\label{repeatedCIsplot}
+\end{figure}
+
+
+Note that when we compute a 95\% confidence interval for a particular
+sample, we have only \emph{one} interval. 
+That \textit{particular} interval does
+\emph{not} have the interpretation that the probability that the population mean lies
+\emph{within that interval} is $0.95$. For that statement to be true, it would
+have to be the case that the population mean is a \textbf{random variable}, but it's not, it's a point value that we have to estimate.
+
+
+\textbf{Aside: Random variables}
+
+A random variable $X$ is a function $X : S \rightarrow \mathbb{R}$ that associates to each outcome
+$\omega \in S$ exactly one number $X(\omega) = x$.
+
+$S_X$ is all the $x$'s (all the possible values of X, the support of X). I.e., $x \in S_X$.
+
+Good example: number of coin tosses till H
+
+\begin{itemize}
+	\item $X: \omega \rightarrow x$
+	\item $\omega$: H, TH, TTH,\dots (infinite)
+	\item $x=0,1,2,\dots; x \in S_X$
+\end{itemize}
+
+Every discrete random variable X has associated with it a \textbf{probability mass/distribution  function (PDF)}, also called \textbf{distribution function}. 
+
+
+\begin{equation}
+p_X : S_X \rightarrow [0, 1] 
+\end{equation}
+
+defined by
+
+\begin{equation}
+p_X(x) = P(X(\omega) = x), x \in S_X
+ \end{equation}
+
+[\textbf{Note}: Books sometimes abuse notation by overloading the meaning of $X$. They usually have: $p_X(x) = P(X = x), x \in S_X$]
+
+
+
+The population mean is a single point value that cannot have a
+multitude of possible values and is therefore not one of many members in the set $S$ of a random variable.
+
+It's worth repeating the above point about confidence intervals.  
+The meaning of the confidence interval
+depends crucially on hypothetical repeated samples: 95\% of the confidence
+intervals in these repeated samples will contain the
+population mean. In essence, the confidence interval from a single
+sample is in the set $S$ of a random variable, just like heads and tails in a coin toss are in the set $S$ of a random variable. Just as a
+fair coin has a 0.5 chance of yielding a heads, a confidence interval has a 0.95 chance of containing the population mean.
+
+The meaning of confidence intervals is confusing enough,
+but often (e.g., \cite{mooreetal}), statisticians confuse the issue even further by writing, for a single sample: ``We are 95\% confident that the population mean lies within this [a particular sample's] 95\% CI.'' Here, they are using the word `confidence' with a very specific meaning. Normally, when I say that I am 100\% confident that it will rain today, I mean that the probability of it raining today is 100\%. The above statement, ``We are 95\% confident that the population mean lies within \underline{this} [a particular sample's] 95\% CI.'', uses `confidence' differently; it even uses the word ``this'' in a very misleading way.
+Statistics textbooks do not mean that the probability of the population mean being in \underline{that} \underline{one} \underline{specific} confidence interval is 95\%, but rather that ``95\% of the confidence intervals will contain the population mean''. Why this misleading wording? Either they were not paying attention to what they were writing, or they found it cumbersome to say the whole thing each time, so they (statisticians) came up with a short-cut formulation.  
+
+\section{Sample SD and \index{degrees of freedom}Degrees of Freedom} \label{ch3nminusone}
+
+Let's revisit the question: Why do we use $n-1$ in the
+equation for standard deviation?  
+Recall that the sample standard deviation $s$ is just the square root of the variance:
+the average distance of the numbers in the list from the mean of the
+numbers:
+\begin{equation} 
+s^2 = \frac{1}{n-1} \underset{i=1}{\overset{n}{\sum}}(x_i - \bar{x})^2  \label{nminusone}
+\end{equation}
+
+We can explore the reason why we use $n-1$ in the context of
+estimation by considering what would happen 
+if we simply used $n$ instead. As we will see, if we use $n$, then $s^2$
+(which is an estimate of the population variance $\sigma^2$) would be
+smaller than the true population variance. This smaller $s^2$ turns out to provide a poorer estimate than
+when we use $n-1$. Let's verify this using simulations.
+
+We define new variance functions that use $n$, and simulate the sampling distribution of this new statistic from a population with known variance $\sigma^2=1$).
+<<>>=
+# re-define variance to see whether it underestimates:
+new.var <- function(x){
+	sum((x-mean(x))^2) / length(x)
+}
+
+correct <- rep(NA,1000)
+incorrect <- rep(NA,1000)
+
+for(i in 1:1000){
+  sample.10 <- rnorm(10, mean=0, sd=1)
+  correct[i] <- var(sample.10)
+  incorrect[i] <- new.var(sample.10)
+}       
+@ 
+
+As shown below (Figure~\ref{fig:nminus1}), 
+using $n$ gives, on average, an underestimated value of the true
+variance:
+
+<<label=nminus1,include=FALSE>>=
+multiplot(1,2)
+hist(correct,main=paste("Mean ",round(mean(correct),digits=2),sep=" "))
+hist(incorrect,main=paste("Mean ",round(mean(incorrect),digits=2),sep=" "))
+@
+
+
+\begin{figure}[!htbp]
+  \centering
+<<fig=TRUE,width=10,echo=FALSE>>=
+<<nminus1>>
+@   
+\caption{The consequence of taking $n-1$ versus $n$ in the
+denominator for calculating variance, sample size 10.}
+\label{fig:nminus1}
+\end{figure}
+
+As we mentioned earlier, for large $n$ it will not matter much whether we take $n$ or $n-1$. Try it out yourself for large $n$ to see if this is true. For more formal details on the $n$ vs $n-1$ issue, read the book by Kerns.
+
+\section{Summary of the Sampling Process}
+
+It is useful at this point to summarize the terminology we have been
+using, and the logic of sampling. First, take a look at the concepts
+we have covered so far. 
+
+We provide a list of the different concepts in
+Table~\ref{summaryofnotation} below for easy reference.
+Here, $\sigma_{\bar{x}} = \frac{\sigma}{\sqrt{n}}$ and $SE_{\bar{x}} = \frac{s}{\sqrt{n}}$.
+
+\begin{table}[!htbp]
+\begin{center}
+\caption{A summary of the notation used.}\label{summaryofnotation}
+\begin{tabular}{r|r}
+The sample statistic~~ & ~~is an estimate of \\
+\hline
+sample mean $\bar{x}$~~               & population mean $\mu$   \\
+sample SD $s$~~                       & population SD $\sigma$ \\
+standard error $SE_{\bar{x}}$~~ & sampling distribution $\sigma_{\bar{x}}$ \\ 
+\end{tabular}
+\end{center}
+\end{table}
+
+
+
+\begin{enumerate}
+\item
+Statistical inference usually involves a single sample; due to the central limit theorem, we know that
+for large sample sizes, the sampling distribution is normal. 
+\item
+The statistic (e.g., sample mean) in a random sample is a good estimate of the population parameter (the population mean) than
+not. This follows from the normal distribution of the sample means. 
+\item
+The standard
+deviation of the sampling distribution $\sigma_{\bar{x}}$ is 
+determined by two things: the inherent variability $\sigma$ in the population, and the sample size. 
+It tells us how ``tight'' the distribution is.
+If $\sigma_{\bar{x}}$ is small, then the distribution has a narrow shape: random samples are more likely to have means very close to
+the true population mean, 
+and inference about the true mean is more certain.  If $\sigma_{\bar{x}}$ is large, then
+the fall-off in probability from the center is gradual: means of random samples
+far from the true mean are more likely to occur, samples are not such good
+indicators of the population parameters, and inference is less
+certain.
+\item
+We usually do not know $\sigma_{\bar{x}}$, but we can estimate it using $SE_{\bar{x}}$ and we can perform inference using the t-distribution.
+\end{enumerate}
+
+
+
+\section{\index{significance tests}Significance Tests}
+
+Recall the discussion of 95\% confidence intervals:
+The sample gives us a mean $\bar{x}$.  We compute $SE_{\bar{x}}$ (an
+estimate of $\sigma_{\bar{x}}$) using $s$ (an estimate of $\sigma$)
+and sample size $n$.  Then we calculate the (approximate) range $\bar{x} \pm 2 \times
+SE_{\bar{x}}$.  
+That's the 95\% CI. 
+Make sure you understand why I am multiplying the standard error by 2; it's an approximation that I will presently make more precise.
+
+We don't know the population mean---if we did, why bother sampling?
+But suppose we have a \textit{hypothesis} that the population mean
+has a certain value.  If we have a hypothesis about the
+population mean, 
+then we also know what the corresponding sampling distribution would look like: we know the probability of any possible sample given that hypothesis.
+We then take an actual sample, measure the distance of our sample mean
+from the hypothesized population mean, and use the facts of the
+sampling distribution to determine the probability of obtaining 
+such a sample
+\textit{assuming the hypothesis
+is true}. This amounts to a \emph{test} of the hypothesis. Intuitively, if the probability of our sample (given the hypothesis) is high, this provides evidence that the hypothesis \textit{could} be true. In a sense, this is what our hypothesis predicts. Conversely, if the probability of the sample is low (given the hypothesis), this is evidence against the hypothesis. 
+The hypothesis being tested in this way is termed the \textsc{null hypothesis}. Let's do some simulations to
+better understand this concept.
+
+Suppose our hypothesis, based perhaps on previous research, 
+is that the population mean is 70, and let's assume for the moment the population $\sigma = 4$. This in turn means that the sampling distribution of the mean, given some sample size, say 11, would have a mean of 70, and a standard deviation $\sigma_{\bar{x}} = 1.2$:
+
+<<print=TRUE>>==
+SD.distribution = 4/sqrt(11)
+@
+
+Figure~\ref{fig:nullhypexample} shows what we expect our sampling
+distribution to look like if our hypothesis \textit{were in fact}
+true. This hypothesized distribution is going to be our reference
+distribution on which we base our test.
+
+
+<<label=nullhypexample,include=FALSE>>=
+range <- seq(55,85,0.01)
+
+plot(range,dnorm(range,mean=70,
+     sd=SD.distribution),type="l",ylab="",main="The null hypothesis")
+@
+
+\begin{figure}[!htbp]
+  \centering
+<<fig=TRUE,echo=FALSE>>=
+<<nullhypexample>>
+@
+\caption{A sampling distribution with mean 70 and $\sigma_{\bar{x}}$ =
+\Sexpr{format(SD.distribution,digits=4)}.} \label{fig:nullhypexample}
+\end{figure}
+
+Suppose now
+that we take an actual sample of 11 from a population whose mean $\mu$ is in fact (contra the hypothesis)
+60:
+
+<<>>=
+sample <- rnorm(11,mean=60,sd=4)
+@
+
+<<print=TRUE>>=
+sample.mean <- mean(sample)
+@
+
+
+
+Inspection of (Figure~\ref{fig:nullhypexample}) shows that, in a world
+in which the population mean was really 70, the probability of obtaining a sample whose mean is \Sexpr{format(sample.mean,digits=2)} is extremely low. Intuitively, this sample is ``evidence against the null hypothesis''.
+
+A \textsc{significance test} provides a formal way of quantifying this reasoning. 
+The result of such a test yields a probability that
+indicates exactly how well or poorly the data and the null hypothesis agree.
+
+
+\section{The \index{null hypothesis}Null Hypothesis}
+
+While this perfectly symmetrical, intuitive way of viewing things (`evidence for', `evidence against') is on the right track, there is a further fact about the null hypothesis which gives rise to an asymmetry in the way we perform significance tests.
+
+The statement being tested in a significance test--- the
+\textsc{null hypothesis}, $H_0$--- is usually formulated in such a way
+that the statement represents `no effect,' `pure chance' or `no significant difference'. 
+Scientists are usually not so interested in proving `no effect.' This is where the asymmetry comes in: we are usually not interested in finding evidence \emph{for} the null hypothesis, conceived in this way. Rather, we are interested in evidence \emph{against} the null hypothesis, since this is evidence for some real statistically significant result. This is what a formal significance test does: it determines whether the result provides sufficient evidence against the null hypothesis for us to reject it.
+Note that if it doesn't provide sufficient evidence against the null, we have \emph{not} proved the contrary---we have not `proved the null hypothesis.' We simply don't have enough evidence, \emph{based on this single result}, to reject it. We come back to this in a later lecture.
+
+In order to achieve a high degree of skepticism about the interpretation of the data, we require the evidence against the null hypothesis to be very great. 
+In our current example, you might think the result we obtained, \Sexpr{format(sample.mean,digits=2)}, was fairly compelling evidence against it. But how do we quantify this? Intuitively, the further away from the mean of the sampling distribution our data lies, the greater the evidence against it. Statistically significant results reside out in the tails of the distribution. How far out? The actual values and ranges of values we get will vary from experiment to experiment, and statistic to statistic. How can we determine a general rule?
+
+\section{\index{z-scores}z-scores} \label{zscores}
+
+We have already seen that, in a normal distribution, about 95\% of the total probability falls within 2 SD of the mean, and thus 5\% of the probability falls far out in the tails. One way of setting a general rule then, is to say that if an observed value falls far out in the tail of the distribution, we will consider the result extreme enough to reject the null hypothesis (we can set this threshold anywhere we choose: 95\% is a conventional setting).
+
+Recall our model: we know the sampling distribution we would see in a world in which the null hypothesis is true, in which the population mean is really 70 (and whose population $\sigma$ is known to be 4). We also know this distribution is normal. How many SDs from the mean is our observation? Is it more than 2 SDs?
+
+We need to express the difference between our observation $\bar{x}$ and hypothesized mean of the distribution $\mu_0$ in units of the standard deviation of the distribution: i.e., some number $z$ times
+$\sigma_{\bar{x}}$. We want to know this number $z$.
+
+\begin{equation}
+\bar{x} - \mu_0 =  z \sigma_{\bar{x}} 
+\end{equation}
+
+Solving for $z$:
+
+\begin{align}
+z = & \frac{\bar{x} - \mu_0}{\sigma_{\bar{x}}} \\ 
+  = & \frac{\bar{x} - \mu_0}{\sigma/\sqrt{n}} 
+\end{align}
+
+$z$ is called the \textsc{standardized value} or the \textsc{z-score}. In addition, one could imagine computing this standardized version of the sample mean every time we take a sample, in which case we have effectively defined a new statistic. Viewed in this way, the score is also referred to as a \textsc{test-statistic}.
+
+
+Let's make this concrete. Suppose in our current simulation we draw a sample whose mean is precisely 60: then $\bar{x} =  
+60, \mu_0 = 70, 
+\sigma = 4, n = 11$. So we get:
+
+
+\begin{align}
+z = & \frac{60 - 70}{4/\sqrt{11}} \\
+  = & -8.291562
+\end{align}
+
+We see that this observation is well beyond 2 SDs from the mean, and thus represents statistically significant evidence against the null hypothesis.
+
+
+z-scores are a quick and accepted way of expressing `how far away' from the hypothetical value an observation falls, and for determining if that observation is beyond some accepted threshold. Ultimately, however, they take their meaning from the  probability corresponding to the value, which is traditionally expressed by rules-of-thumb (2 SD corresponds to 95\%), or tables which translate particular scores to particular probabilities. It is this probability we turn to next.
+
+
+\section{\index{p-values}P-values} \label{pvals}
+We would like to reason as follows:
+`If the probability of the obtaining the sample mean that we got is less than 0.05, given the null
+hypothesis, then we reject the null hypothesis.' However, in continuous distributions, the probability of getting exactly a particular value is (perhaps counter-intuitively) zero. 
+
+Although we cannot use the actual probability of the observed value, we can usefully ask \emph{how much of
+the total probability lies beyond the observed value}, out into the tail of the distribution. In the discrete case this is a sum of probabilities, in the continuous case (normal distribution) an area under the curve. Call $o_1$ the observed value, $o_2$ the next value out, $o_3$ the next, and so on until we exhaust all the possibilities. The sum of these is the probability of a complex event, the probability of `observing the value $o_1$ or a value more extreme.' (Once again, we couch our probability measure in terms of a range of values). This then is a measure, based directly on probability, of `how far away' from the mean an observed value lies. The smaller this probability, the more extreme the value.
+We can now say, if this probability is less than $0.05$, we reject the hypothesis. The technical name for this measure is the \textsc{p-value}.
+
+In short, the p-value of a statistical test is the probability, computed assuming
+that $H_0$ is true, that the test statistic would take a
+value as extreme
+or more extreme than that actually observed. 
+
+
+\label{pvaluefallacy}
+Note that this is a \index{conditional probability}\textsc{conditional
+  probability}: it is the probability of observing a particular sample
+mean (or something more extreme) conditional on the assumption that
+the null hypothesis is true. We can write this conditional probability
+as $P(\hbox{Observed mean}\mid H_0$), or even more succinctly as
+$P(\hbox{Data}\mid H_0)$. The p-value does \textit{not} measure the
+probability of the null hypothesis given the data, $P(H_0 \mid
+\hbox{Data}$).  There is a widespread misunderstanding that the
+p-value tells you the probability that the null hypothesis is true (in
+light of some observation); it doesn't. You can confirm easily that we
+cannot ``switch'' conditional probabilities. The probability of the
+streets being wet given that rain has fallen $P(\hbox{Wet Streets} \mid
+\hbox{Rain})$ (presumably close to 1) is not at all the same as the
+probability of rain having fallen given that the streets are wet
+$P(\hbox{Rain}\mid \hbox{Wet Streets})$. There are many reasons why the streets may
+be wet (street cleaning, burst water pipes, etc.), rain is just one of
+the possibilities.
+
+
+How do we determine this p-value? We simply sum up
+(integrate) the area under the normal curve, going out from our observed
+value. (Recall that, for the present, we are assuming we \emph{know}
+the population parameter $\sigma$). We actually have two completely equivalent ways
+to do this, since we now have two values (the actual observed value
+and its z-score), and two corresponding curves (the  sampling
+distribution where the statistic is the sample mean, and the sampling
+distribution where the statistic is the standardized mean, the
+`z-statistic'). We have seen what the sampling distribution of the sample mean looks like, assuming the null hypothesis is true (i.e. $\mu_0 = 70$, Figure~\ref{fig:nullhypexample}). What is the sampling distribution of the z-statistic under this hypothesis? Let's do a simulation to find out.
+
+In Figure~\ref{fig:sampleMeanVsZ}, we repeat the simulation of sample
+means that we carried out at the beginning of the chapter, but now using the parameters of our current null hypothesis $\mu_0 = 70$, $\sigma = 4$, sample size $=11$. But in addition, for each sample we also compute the z-statistic, according to the formula provided above. We also include the corresponding normal curves for reference (recall these represent the limiting case of the simulations). As you can see, the distribution of the z-statistic is normal, with mean $=0$, and SD $=1$. A normal distribution with precisely these parameters is known as the \textsc{standardized normal distribution}.
+
+
+<<label=sampleMeanVsZ,include=FALSE>>=
+
+sample.means <- rep(NA, 1000)
+zs <- rep(NA, 1000)
+
+for(i in 1:1000){
+  sample.11 <- rnorm(11,mean=70,sd=4)
+  sample.means[i] <- mean(sample.11)
+  zs[i] <- ( mean(sample.11) - 70 ) / (4/sqrt(11))	  
+}
+
+
+multiplot(2, 2)
+sd.dist <- 4/sqrt(11)
+plot(density(sample.means,kernel="gaussian"),xlim=range(70-(4*sd.dist), 
+70+(4*sd.dist)),xlab="",ylab="",main="")	
+plot(density(zs,kernel="gaussian"),xlim=range(-4, 4),xlab="",ylab="",main="")
+plot(function(x) dnorm(x, 70, 4/sqrt(11)), 
+70-(4*sd.dist), 70+(4*sd.dist),xlab="",ylab="",main="")	
+plot(function(x) dnorm(x, 0, 1), -4, 4,xlab="",ylab="",main="")
+@
+
+\begin{figure}[!htbp]
+  \centering
+<<fig=TRUE,echo=FALSE>>=
+<<sampleMeanVsZ>>
+@
+\caption{The sampling distribution of the sample mean (left) and its z-statistic (right).}
+  \label{fig:sampleMeanVsZ}
+\end{figure}
+
+The crucial thing to note is that the area from either value out to the edge, which is the probability of interest, is precisely the same in the two cases, so we can use either. It is traditional to work with the standardized values, for reasons that will become clear.
+
+Recall the z-score for our actual observation was $-8.291562$. This is an extreme value, well beyond 2 standard errors 
+from the mean, so we would expect there to be very little probability between it and the left tail of the distribution. We can calculate it directly by integration: 
+
+<<>>=
+integrate(function(x) dnorm(x, mean = 0, sd = 1), -Inf, -8.291562)
+## alternative, more standard way:
+pnorm(mean=0,sd=1,-8.291562)
+@
+
+This yields a vanishingly small probability. We also get precisely the same result using the actual observed sample mean with the original sampling distribution:
+
+<<>>=
+integrate(function(x) dnorm(x, mean = 70, sd = 4/sqrt(11)), -Inf, 60)
+pnorm(60,mean=70,sd=4/sqrt(11))
+@
+
+Suppose now we had observed a sample mean of $67.58$. This is much closer to the hypothetical mean of $70$. The standardized value here is almost exactly $-2.0$:
+
+<<>>=
+(67.58-70)/(4/sqrt(11))
+@
+
+Integrating under the standardized normal curve we find the following probability:
+
+<<>>=
+integrate(function(x) dnorm(x, 0, 1), -Inf, -2.0)
+pnorm(-2,mean=0,sd=1)
+@
+
+This accords well with our rule-of-thumb. About 95\% of the probability is within 2 standard errors of the mean. The remainder is split into two, one at each end of the distribution, each representing a probability of about 0.025.
+
+In the code above, we have used the \texttt{integrate} function, but the standard way to do this in R (and this is what we will do from now on) is to use \texttt{pnorm}.
+For example: we can compute the probability of getting a z-score like $-8.291562$ or smaller using:
+
+<<>>=
+pnorm(-8.291562)
+@
+
+Note that I did not specify the mean and sd; this is because the default assumption in this function is that mean is 0 and sd=1.
+
+\section{Hypothesis Testing: A More Realistic Scenario}
+
+In the above example we were able to use the standard deviation of the sampling distribution $\sigma_{\bar{x}}$, because we were given the standard deviation of the population
+$\sigma$. As we remarked earlier, in the real world we usually do not know $\sigma$, it's just another unknown parameter of the population. Just as in the case of computing real world confidence intervals, instead of
+$\sigma$ we use the estimate $s$; instead of
+$\sigma_{\bar{x}}$ we use the estimate $SE_{\bar{x}}$;
+instead of the normal distribution we use the t-distribution.
+
+Recall the $z$-score:
+\begin{align}
+z = & \frac{\bar{x} - \mu_0}{\sigma_{\bar{x}}} \\ 
+  = & \frac{\bar{x} - \mu_0}{\sigma/\sqrt{n}} 
+\end{align}
+
+And recall our formal definition of a statistic: a number that describes some aspect of the sample. Using this definition, the z-score seems to fail as a statistic, since it makes reference to a population \emph{parameter} $\sigma$. 
+But if we now replace that parameter with an estimate $s$ derived from the sample itself, we get the so-called t-statistic:
+
+\begin{align} \label{ttestequation}
+t = & \frac{\bar{x} - \mu_0}{SE_{\bar{x}}} \\ 
+  = & \frac{\bar{x} - \mu_0}{s/\sqrt{n}} 
+\end{align}
+
+This then can also be interpreted as yet another sampling statistic,
+with its own distribution.
+
+\bigskip
+
+Note that our null hypothesis $H_0$ was that
+the hypothesized mean has some specific value $\mu=\mu_0$.
+Thus, rejecting the null hypothesis amounts to accepting the alternative
+hypothesis, i.e., that the true value is less than the hypothesized mean \emph{or} the true value is greater than the mean:
+
+\begin{equation}
+H_a: \mu\neq \mu_0 \Leftrightarrow \mu < \mu_0 \hbox{ or } \mu > \mu_0
+\end{equation}
+
+This means that as evidence for rejection of $H_0$ we will
+count extreme values on \emph{both} sides of $\mu$. For this reason, the
+above test is called a \index{significance test, two-sided}\textsc{two-sided significance test} (also known as the \index{significance test, two-tailed}\textsc{two-tailed significance test}). 
+Note that if we simply reported the probability corresponding to the t-value \emph{t}, we would \emph{not} be reporting the probability of `a value being more than \emph{t} away' from the mean, but the probability in one direction only. For that reason, in a two-sided test, since the distributions are symmetrical, the p-value will be twice the value of the probability corresponding to the particular t-value we obtain.
+If the p-value is
+$\leq \alpha$, we say that the data are significant at level $\alpha$. Purely by convention, $\alpha=0.05$.
+
+By contrast, if our null hypothesis were that $\mu \geq \mu_0$, then the alternative hypothesis would be:
+
+\begin{equation}
+H_a:  \mu < \mu_0	
+\end{equation}
+ 
+In this situation, we would use a \index{significance test, one-sided}one-sided significance test, reporting the probability in the relevant direction only.
+
+R does everything required for a t-test of significance as follows,
+and you can specify (inter alia) what your $\mu_0$ is (note that it
+need not be zero), whether it is two-sided or not (see the
+documentation for the \texttt{t.test} for details on how to specify
+this), and the confidence level (the $\alpha$ level) you desire, as follows:
+
+<<>>=
+sample.11 <- rnorm(11,mean=60,sd=4)
+
+t.test(sample.11,
+       alternative = "two.sided",
+       mu = 70, 
+       conf.level = 0.95)
+@ 
+
+Experiment with the above code: change the hypothetical mean, change the mean of the sampled population and its SD, change the sample size, etc. In each case, see how the sample mean, the t-score, the p-value and the confidence interval differ. Make sure you understand what the output says---you have the relevant background at this point to do so.
+
+It is also instructive to keep the parameters the same and simply repeat the experiment, taking different random samples each time (effectively, \textsc{replicating} the experiment). Watch how the p-values change, watch how they change from replicate to replicate under different parameter settings. Do you ever find you would accept the null hypothesis when it is in fact false? How likely is it that you would make a mistake like that? This is an issue we will return to in more depth later.
+
+The t-value we see above is indeed the t in equation \ref{ttestequation}; we can verify this by doing the calculation by hand:
+
+<<>>=
+(mean(sample.11)-70)/se(sample.11)
+@
+
+
+\section{Comparing Two Samples}
+
+In one-sample situations our null hypothesis is that the population mean has some specific value $\mu_0$:
+
+\begin{equation}
+H_0: \mu=\mu_0
+\end{equation}
+
+When we compare samples from two (possibly) different populations, we ask the question: are the
+population means identical or not? Our goal now is to
+figure out some way to define our null hypothesis in this situation.
+
+Consider this example of a common scenario in experimental research. Let us assume that the 
+mean reading times and standard deviations are available 
+for children and adults reading English sentences,  
+and let us say that we want to know whether children are
+faster or slower than adults in terms of reading time.
+You probably don't need to do an experiment to answer this question,
+but it will do as an illustration of this type of experiment.
+
+We know that, due to the nature of repeated sampling,  
+there is bound to be
+\emph{some} difference in sample means even if the population means
+are identical. We can reframe the research question as follows: is the
+difference observed between the two sample means  
+consistent or inconsistent with our null hypothesis.  The data are shown in Table~\ref{adultchilddata}.
+
+\begin{table}
+\begin{center}
+\caption{Hypothetical data showing reading times for adults and children.}
+\label{adultchilddata}       % Give a unique label
+\begin{tabular}{p{2cm}p{3cm}p{3cm}p{3cm}}
+group & sample size $n$ & Mean (secs) & SD \\
+\hline
+children & $n_1=$ 10 & $\bar{x}_1=30$ & $s_1=43$ \\
+adults   & $n_2=$ 20 & $\bar{x}_2=7$ & $s_2=25$ \\
+\end{tabular}
+\end{center}
+\end{table}
+
+Notice a few facts about the data. We have different sample sizes in each case. How will that affect our analysis? Notice too that we have different standard deviations in each case: this makes sense, since children exhibit a wider range of abilities than literate adults. But we now know how great an effect the variability of the data has on statistical inference. How will we cope with these different SD's? Finally, the mean reading times certainly `look'  different. We will quantify this difference with reference to the null hypothesis.
+
+Such research problems have the properties that 
+(i) the goal is to compare the responses in two groups;
+(ii) each group is considered a sample from a distinct population (a `between-subjects' design);
+(iii) the responses in each group are independent of those in the other group; and
+(iv) the sample sizes of each group may or may not be different. 
+
+The question now is, given that we have a research question involving two means, how can we formulate the null hypothesis?
+
+\subsection{$H_0$ in \index{two sample problems}Two-sample Problems}
+
+Let us start by saying that the unknown population mean of children is $\mu_1$, and that of adults is $\mu_2$. 
+We can state our null hypothesis as follows:
+
+\begin{equation}
+H_0: \mu_1 = \mu_2
+\end{equation}
+
+\label{twosampleproblemsnull}
+Equivalently, we can say that our null hypothesis is that the difference between the two means is zero:
+
+\begin{equation}
+H_0: \mu_1 - \mu_2 = 0 = \delta
+\end{equation}
+
+We have effectively created a new population parameter $\delta$:
+
+\begin{equation}
+H_0: \delta = 0
+\end{equation}
+
+We can now define a new \index{statistic}statistic $d = \bar{x}_1 - \bar{x}_2$ and
+use that as an estimate of $\delta$, which we've hypothesized to be
+equal to zero.  But to do this we need a sampling distribution of the
+difference of the two sample means $\bar{x}_1$ and  $\bar{x}_2$.
+
+Let's do a simulation to get an understanding of this approach.
+For simplicity we will use the sample means and standard deviations from the example above as our population parameters in the simulation, and we will also use the sample sizes above for the repeated sampling.
+Assume a population with $\mu_1 = 30$, $\sigma_1 = 43$, and
+another with mean $\mu_2 = 7$, $\sigma_2 = 25$.  So we already know
+in this case that the null hypothesis is false, since $\mu_1 \neq \mu_2$.  But let's take 1000
+sets of samples of each population, compute the differences in mean in
+each set of samples, and plot that distribution of \emph{the differences of
+the sample mean}:
+
+%First we simulate 1000 replications from the two populations, compute the difference in means in each of the simulations.
+
+
+<<>>=
+d <- rep(NA,1000)
+
+for(i in 1:1000){
+  sample1 <- rnorm(10,mean=30,sd=43)
+  sample2 <- rnorm(20,mean=7,sd=25)
+  d[i] <- mean(sample1) - mean(sample2)
+}
+@ 
+
+Note that the mean of the
+differences-vector \texttt{d} is close to the true difference:
+
+<<print=TRUE>>=
+
+30-7
+
+mean(d)
+@
+
+\noindent
+Then we plot the distribution of \texttt{d}; we see a normal distribution  (Figure~\ref{fig:diff}). 
+
+<<label=diff,include=FALSE>>=
+hist(d)
+@
+
+So, the distribution of the differences between the two sample means is normally distributed, and centered around the true difference between
+the two populations. It is because of these properties that we can safely take $d$ to be an estimate of $\delta$. How accurate an
+estimate is it? In other words, what is the standard deviation of this new sampling distribution? It is clearly dependent on (a function of) the standard
+deviation of the two populations in some way: \begin{equation} \sigma_{\bar{x}_1 - \bar{x}_2} = f(\sigma_1,\sigma_2) \end{equation}
+
+(Try increasing one or other or both of the $\sigma$ in the above simulation to see what happens). The precise relationship is fundamentally additive: instead of taking the root of the variance, we take the root of the sum of variances:
+
+
+\begin{figure}[!htbp]
+  \centering
+<<fig=TRUE,echo=FALSE>>=
+<<diff>>
+@   
+  \caption{The distribution of the difference of sample means of two samples.}
+  \label{fig:diff}
+\end{figure}
+
+
+
+<<echo=FALSE>>=
+newsigma<-round(sqrt((43^2/10)+(25^2/20)),digits=4)
+@
+
+
+\begin{equation}
+\sigma_{\bar{x}_1 - \bar{x}_2} 
+= \sqrt{\frac{\sigma_1^2}{n_1} + \frac{\sigma_2^2}{n_2}} = \sqrt{\frac{43^2}{10} + \frac{25^2}{20}} = \Sexpr{newsigma}.
+\end{equation}
+
+<<>>=
+newsigma<-round(sqrt((43^2/10)+(25^2/20)),digits=4)
+@
+
+
+In our single sample, $\bar{x}_1 - \bar{x}_2 = 17$.
+The null hypothesis is $\mu_1 - \mu_2 = 0$.
+How should we proceed? Is this sample difference sufficiently far away from the hypothetical difference (0) to allow us to reject the null hypothesis? Let's first translate the observed difference 17 into a z-score. Recall how the z-score is calculated:
+
+\begin{equation}
+z = \frac{\bar{x} - \mu_0}{\sigma/\sqrt{n}} = \frac{\hbox{sample mean} - \hbox{pop.\ mean}}{\hbox{sd of sampling distribution}}
+\end{equation}
+
+If we replace $\bar{x}$ with $d$, and the new standard deviation from the two populations' standard deviations,
+we are ready to work out the answer:
+
+\begin{align}
+z & = \frac{(\bar{x}_1 - \bar{x}_2) - (\mu_1- \mu_2)}{
+\sqrt{\frac{\sigma_1^2}{n_1} + \frac{\sigma_2^2}{n_2}}} \\
+  & = \frac{17 - 0}{\Sexpr{newsigma}} \\
+  & = \Sexpr{round(17/newsigma,digits=4)}
+\end{align}
+
+Using exactly the same logic as previously, because we don't know the
+population parameters in realistic settings, we replace the $\sigma$'s with the sample standard deviations to get the t-statistic:
+
+\begin{align}
+t & = \frac{(\bar{x}_1 - \bar{x}_2) - (\mu_1- \mu_2)}{
+\sqrt{\frac{s_1^2}{n_1} + \frac{s_2^2}{n_2}}} 
+\end{align}
+
+This is the \index{t-statistic, two-sample}\textsc{two-sample} t-\textsc{statistic}. 
+
+So far so good, but we want to now translate this into a p-value, for which we need
+the appropriate t-distribution. The problem we face here is that
+the degrees of freedom needed for the correct t-distribution are not obvious.
+The t-distribution assumes that only one $s$ replaces a single $\sigma$; but
+we have two of these.
+If $\sigma_1 =\sigma_2$, we could just take a \textit{weighted
+    average} of the two sample SDs $s_1$ and $s_2$.
+
+  In our case the correct t-distribution
+has $n_1 - 1 + n_2 - 1$ degrees of freedom (the sum of the degrees of freedom
+of the two sample variances; see
+\cite[422]{rice1995mathematical} for a formal
+proof).
+
+In real life we don't know whether $\sigma_1 =\sigma_2$.  One
+response would be to err on the side of caution, and simply use
+degrees of freedom corresponding to the smaller sample size. Recall
+that smaller degrees of freedom reflect greater uncertainty, so the
+estimate we get from this simple approach will be a conservative one.
+
+However, in a more sophisticated approach, something called Welch's
+correction corrects for possibly unequal variances
+in the t-curve. R does this correction for you if you specify that
+the variances are to be assumed to be unequal (\texttt{var.equal=FALSE}).
+
+<<print=FALSE>>=
+
+t.test.result<-t.test(sample1,sample2,
+       mu=0,
+       alternative = "two.sided",
+        conf.level = 0.95,var.equal=FALSE)
+@ 
+
+If you print out the contents of \texttt{t.test.result}, you will see
+detailed output. For our current discussion it is sufficient to note
+that the t-value is \Sexpr{round(t.test.result$statistic,digits=2)},
+the degrees of freedom are  
+\Sexpr{round(t.test.result$parameter,digits=2)} (a value somewhere
+between the two sample sizes), 
+and the p-value is \Sexpr{round(t.test.result$p.value,digits=2)}. Recall that every
+time you run the t-test with newly sampled data (you should try this), your results will be
+slightly different; so do not be surprised if you occasionally fail to
+find a significant difference between the two groups even though you
+already know that in reality there is such a difference. We turn to this
+issue in the next lecture.
+
+
+

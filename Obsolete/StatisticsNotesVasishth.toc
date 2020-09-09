@@ -1,0 +1,4 @@
+\contentsline {chapter}{\numberline {1}What this course is about}{1}{chapter.1}
+\contentsline {section}{\numberline {1.1}Quiz: Do you need this course?}{2}{section.1.1}
+\contentsline {section}{\numberline {1.2}How to survive and perhaps even enjoy this course}{4}{section.1.2}
+\contentsline {section}{\numberline {1.3}Installing R and learning basic usage}{4}{section.1.3}

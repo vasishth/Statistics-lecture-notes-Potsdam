@@ -1,0 +1,121 @@
+\subsection{Experiment design: Latin square and crossed subject and items}
+
+Two important properties of these data are worth noticing. 
+
+\subsubsection{Latin-square design}
+
+First, the design is the classic repeated measure Latin square set-up. To see what this means, 
+first look at the number of subjects and items, and the number of rows in the data frame:
+
+<<>>=
+length(unique(gge1crit$subject))
+length(unique(gge1crit$item))
+dim(gge1crit)[1]
+@
+
+There are 42 subjects and 16 items. There are $42\times 16 = 672$ rows in the data frame. Notice also that each subject sees exactly eight object gap and eight subject gap sentences:
+
+<<>>=
+head(xtabs(~subject+condition,gge1crit),n=4)
+@
+
+The researchers created 16 sets of subject and object relatives; one set is the pair of sentences shown in (1a) and (1b) above. In the data frame, both these two items have the same id 1, but no one subject will see both sentences in any one set. For example, item 1 is seen by subject 1 in the object gap condition (1a) and item 1 is seen by subject 2 in the subject gap condition (1b):
+
+<<>>=
+subset(gge1crit,item==1)[1:2,]
+@
+
+
+\begin{table}[!htbp]
+\caption{The Latin-square design in repeated measures experiments.}
+\begin{center}
+\begin{tabular}{ccc}
+item id & group 1 & group 2\\
+1       & objgap       & subjgap \\
+2       & subjgap       & objgap \\
+3       & objgap       & subjgap \\
+4       & subjgap       & objgap \\
+\vdots  & \vdots  & \vdots \\
+16      & subjgap       & objgap \\
+\end{tabular}
+\end{center}
+\label{tab:latinsq}
+\end{table}
+
+This is called a Latin-square design because of the following layout. See Table \ref{tab:latinsq}.
+Each subject is randomly assigned to Group 1 or 2, and one should have an even number of subjects in order to have a balanced data-set. Hence the 42 subjects in the Grodner and Gibson data: 21 in each group.
+
+A useful way to ensure that you have balanced assignments of subjects to each group is to randomize the order of incoming participants in advance, such that pairs of subjects are assigned to group 1 and 2. Let order1 be such that the first subject gets group 1 and the second gets group 2, and order 2 that the first subject gets group 2 and the second group 1. Then just generate a random ordering to ensure that each pair of subjects lands in a balanced way across groups:
+
+<<>>=
+sample(rep(c("order1","order2"),11))
+@
+
+Latin square designs are used in psychology and linguistics (and other areas) because they are optimal in several ways.
+
+Soon we will need to generate a fake data-frame with a repeated measures Latin square design. We can do this using R as follows (source: \cite{VasishthMertzenJaegerGelman2018}): 
+
+<<>>=
+library(MASS)
+nitem <- 16
+nsubj <- 42
+## prepare data frame for two condition in a latin square design:
+g1<-data.frame(item=1:nitem,
+                 cond=rep(c("objgap","subjgap"),nitem/2))
+g2<-data.frame(item=1:nitem,
+                 cond=rep(c("objgap","subjgap"),nitem/2))
+
+## assemble data frame in long format:
+gp1<-g1[rep(seq_len(nrow(g1)),
+              nsubj/2),]
+gp2<-g2[rep(seq_len(nrow(g2)),
+              nsubj/2),]
+
+fakedat<-rbind(gp1,gp2)
+## sanity check:
+dim(fakedat)
+## add subjects:
+fakedat$subj<-rep(1:nsubj,each=nitem)
+fakedat<-fakedat[,c(3,1,2)]  
+fakedat$so<-ifelse(fakedat$cond=="objgap",1,-1)
+@
+
+For example, subject 1 sees the following conditions and items:
+
+<<>>=
+head(fakedat,n=16)
+@
+
+We will need this code later for fake data simulation, which is needed to calibrate power and Type I error.
+
+\subsubsection{Fully crossed subjects and items}
+
+In the data, because of the Latin square design, each subject sees exactly one item in one of the two conditions:
+
+<<>>=
+xtabs(~subject+item,gge1crit)
+@
+
+If there were some zeros in the above matrix, we would have an imbalance, and this would then be  \textit{partially crossed}. This kind of imbalance arises in data-sets due to missing data, where missingness can happen due to different reasons. E.g., in eyetracking, subjects sometimes skip the critical word entirely, or there is tracking loss; these events lead to a 0 ms reading time being recorded, and this could be treated as missing data (marked as NA). 
+
+### The implied generative model
+
+The above design implies a particular statistical model that takes us beyond the linear model.
+
+To remind you, a simple linear model of the above data would be:
+
+\begin{equation}
+y = \alpha + \beta * x + \varepsilon \hbox{ where } \varepsilon \sim Normal(0,\sigma)
+\end{equation}
+
+Here, object gaps are coded +1, subject gaps -1. See @SchadEtAlcontrasts for an explanation of contrast coding.
+
+```{r}
+gge1crit$so<-ifelse(gge1crit$condition=="objgap",1,-1)
+```
+
+As figure \ref{fig:ggrtdistrn} shows, a Normal likelihood doesn't seem well motivated, so we will use the log-normal.
+
+```{r fig.cap="\\label{fig:ggrtdistrn}Distribution of reading times in the Grodner and Gibson Experiment 1 data, at the critical region."}
+plot(density(gge1crit$rawRT),main="Grodner and Gibson Expt 1",xlab="RTs (ms)")
+```

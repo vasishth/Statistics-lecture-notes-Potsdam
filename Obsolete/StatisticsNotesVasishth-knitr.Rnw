@@ -1,0 +1,119 @@
+\documentclass[12pt]{book}
+
+\usepackage[hmargin=2cm,vmargin=2cm,headsep=0.5cm]{geometry}  
+
+%% added by SV:
+\usepackage{hyperref}
+\hypersetup{a4paper=TRUE,ps2pdf=TRUE,colorlinks=TRUE,linkcolor=blue,anchorcolor=blue,filecolor=blue,pagecolor=blue,urlcolor=blue,citecolor=blue,bookmarksnumbered=true}
+\usepackage{amsmath}
+\usepackage{amssymb}
+%\usepackage{apacite}
+
+\usepackage{mathptmx}
+\usepackage{helvet}
+\usepackage{courier}
+%
+\usepackage{type1cm}         
+
+\usepackage{makeidx}         % allows index generation
+\usepackage{graphicx}        % standard LaTeX graphics tool
+                             % when including figure files
+
+\usepackage{mathtools}
+\makeatletter
+ 
+\newcommand{\explain}[2]{\underset{\mathclap{\overset{\uparrow}{#2}}}{#1}}
+\newcommand{\explainup}[2]{\overset{\mathclap{\underset{\downarrow}{#2}}}{#1}}
+ 
+\makeatother
+
+%% taken from http://brunoj.wordpress.com/2009/10/08/latex-the-framed-minipage/
+\newsavebox{\fmbox}
+\newenvironment{fmpage}[1]
+{\begin{lrbox}{\fmbox}\begin{minipage}{#1}}
+{\end{minipage}\end{lrbox}\fbox{\usebox{\fmbox}}}
+
+
+\hyphenation{distribu-tion}
+
+% see the list of further useful packages
+% in the Reference Guide
+
+\makeindex             % used for the subject index
+                       % please use the style svind.ist with
+                       % your makeindex program
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% NOTE:
+% The line below defines the location of figures generated while compiling
+% (This file will create this directory automatically, see code chunk
+% ``init'' below. 
+%\SweaveOpts{prefix.string=figures/lecturesfig}
+
+
+<<include=FALSE>>=
+library(knitr)
+knitr::opts_chunk$set(
+cache=TRUE
+)
+knitr::opts_chunk$set(fig.height=4)
+@
+
+
+
+\begin{document}
+
+
+\title{An introduction to statistical data analysis (Winter 2018)\\ Lecture notes}
+\author{Shravan Vasishth [vasishth@uni-potsdam.de]}
+\date{Last edited: \today}
+\maketitle
+
+\frontmatter
+
+\tableofcontents
+
+\mainmatter
+
+<<echo=FALSE>>=
+## customize
+options(prompt="> ", continue="   ",#width=59,
+show.signif.stars=FALSE)
+@
+
+
+<<'child-01introduction', child='01introduction-knitr.Rnw'>>=
+@
+
+%%SDSM
+
+<<'child-02RepeatedSampling', child='02RepeatedSampling-knitr.Rnw'>>=
+@
+
+<<'child-03TrueFalseDiscoveryRate', child='03TrueFalseDiscoveryRates-knitr.Rnw'>>=
+@
+
+<<'child-04LinearModeling', child='04LinearModeling-knitr.Rnw'>>=
+@
+
+
+%\include{appendix}
+
+
+\backmatter%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\include{glossary}
+%\include{solutions}
+%\printindex
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\bibliographystyle{plain}
+\bibliography{/Users/shravanvasishth/Dropbox/Bibliography/bibcleaned}
+
+\end{document}
+
+
+
+
+

@@ -1,0 +1,45 @@
+\contentsline {chapter}{\numberline {1}What this course is about}{1}{chapter.1}
+\contentsline {section}{\numberline {1.1}Quiz: Do you need this course?}{1}{section.1.1}
+\contentsline {section}{\numberline {1.2}How to survive and perhaps even enjoy this course}{4}{section.1.2}
+\contentsline {section}{\numberline {1.3}Installing R and learning basic usage}{4}{section.1.3}
+\contentsline {chapter}{\numberline {2}The logic of (hypothetical) repeated sampling}{5}{chapter.2}
+\contentsline {section}{\numberline {2.1}Random variables}{5}{section.2.1}
+\contentsline {subsection}{\numberline {2.1.1}Example of a discrete random variable}{5}{subsection.2.1.1}
+\contentsline {subsection}{\numberline {2.1.2}Example of a continuous random variable}{5}{subsection.2.1.2}
+\contentsline {section}{\numberline {2.2}The normal distribution}{6}{section.2.2}
+\contentsline {section}{\numberline {2.3}The area under the curve in a normal distribution}{9}{section.2.3}
+\contentsline {section}{\numberline {2.4}Repeated sampling}{12}{section.2.4}
+\contentsline {section}{\numberline {2.5}The Central Limit Theorem}{15}{section.2.5}
+\contentsline {section}{\numberline {2.6}$\sigma $ and $\sigma _{\mathaccentV {bar}016{x}}$}{16}{section.2.6}
+\contentsline {section}{\numberline {2.7}The 95\% Confidence Interval for the Sample Mean}{17}{section.2.7}
+\contentsline {section}{\numberline {2.8}Realistic Statistical Inference}{18}{section.2.8}
+\contentsline {section}{\numberline {2.9}$s^2$ provides a good estimate of $\sigma ^2$}{18}{section.2.9}
+\contentsline {section}{\numberline {2.10}The t-distribution}{20}{section.2.10}
+\contentsline {section}{\numberline {2.11}The One-sample t-test}{22}{section.2.11}
+\contentsline {section}{\numberline {2.12}Some Observations on Confidence Intervals}{23}{section.2.12}
+\contentsline {section}{\numberline {2.13}Sample SD and Degrees of Freedom}{26}{section.2.13}
+\contentsline {section}{\numberline {2.14}Summary of the Sampling Process}{27}{section.2.14}
+\contentsline {section}{\numberline {2.15}Null Hypothesis Significance Tests}{28}{section.2.15}
+\contentsline {section}{\numberline {2.16}The Null Hypothesis}{29}{section.2.16}
+\contentsline {section}{\numberline {2.17}z-scores}{30}{section.2.17}
+\contentsline {section}{\numberline {2.18}P-values}{30}{section.2.18}
+\contentsline {section}{\numberline {2.19}Hypothesis Testing: A More Realistic Scenario}{34}{section.2.19}
+\contentsline {section}{\numberline {2.20}Comparing Two Samples}{36}{section.2.20}
+\contentsline {subsection}{\numberline {2.20.1}$H_0$ in Two-sample Problems}{36}{subsection.2.20.1}
+\contentsline {chapter}{\numberline {3}Calibrating the model's properties under repeated sampling}{41}{chapter.3}
+\contentsline {section}{\numberline {3.1}Type I and Type II Errors}{41}{section.3.1}
+\contentsline {section}{\numberline {3.2}Computing sample size for a t-test using R}{50}{section.3.2}
+\contentsline {section}{\numberline {3.3}The form of the power function}{50}{section.3.3}
+\contentsline {section}{\numberline {3.4}Computing the power function (optional reading)}{52}{section.3.4}
+\contentsline {section}{\numberline {3.5}Stopping rules}{54}{section.3.5}
+\contentsline {chapter}{\numberline {4}Linear models}{57}{chapter.4}
+\contentsline {section}{\numberline {4.1}Introduction}{57}{section.4.1}
+\contentsline {subsection}{\numberline {4.1.1}Example: Subject and object relative clauses}{57}{subsection.4.1.1}
+\contentsline {subsubsection}{The simple linear model}{58}{section*.2}
+\contentsline {subsubsection}{Unpacking the linear model output}{63}{section*.3}
+\contentsline {subsubsection}{How the coefficient estimates are computed}{67}{section*.4}
+\contentsline {subsubsection}{Contrast coding}{69}{section*.5}
+\contentsline {subsection}{\numberline {4.1.2}True discovery rate (power)}{71}{subsection.4.1.2}
+\contentsline {section}{\numberline {4.2}A linear model with a continuous predictor}{73}{section.4.2}
+\contentsline {subsection}{\numberline {4.2.1}Does beauty level affect evaluation?}{75}{subsection.4.2.1}
+\contentsline {section}{\numberline {4.3}Using fake-data simulation to understand a model}{76}{section.4.3}

@@ -1,0 +1,83 @@
+\begin{thebibliography}{10}
+
+\bibitem{EngelmannJaegerVasishthSubmitted2018}
+Felix Engelmann, Lena~A. J{\"a}ger, and Shravan Vasishth.
+\newblock The effect of prominence and cue association in retrieval processes:
+  {A} computational account.
+\newblock Manuscript submitted to Cognitive Science, 2018.
+
+\bibitem{gelmanhill07}
+A.~Gelman and J.~Hill.
+\newblock {\em Data analysis using regression and multilevel/hierarchical
+  models}.
+\newblock Cambridge University Press, Cambridge, UK, 2007.
+
+\bibitem{gibson00}
+Edward Gibson.
+\newblock Dependency locality theory: {A} distance-based theory of linguistic
+  complexity.
+\newblock In Alec Marantz, Yasushi Miyashita, and Wayne O'Neil, editors, {\em
+  {Image, Language, Brain}: {Papers from the First Mind Articulation Project
+  Symposium}}. MIT Press, Cambridge, MA, 2000.
+
+\bibitem{grodner}
+Daniel Grodner and Edward Gibson.
+\newblock Consequences of the serial nature of linguistic input.
+\newblock {\em Cognitive Science}, 29:261--290, 2005.
+
+\bibitem{hoekstra2014robust}
+Rink Hoekstra, Richard~D Morey, Jeffrey~N Rouder, and Eric-Jan Wagenmakers.
+\newblock Robust misinterpretation of confidence intervals.
+\newblock {\em Psychonomic Bulletin \& Review}, pages 1--8, 2014.
+
+\bibitem{hoenigheisey}
+John~M. Hoenig and Dennis~M. Heisey.
+\newblock The abuse of power: {T}he pervasive fallacy of power calculations for
+  data analysis.
+\newblock {\em The American Statistician}, 55:19--24, 2001.
+
+\bibitem{JaegerEngelmannVasishth2017}
+Lena~A. J{\"a}ger, Felix Engelmann, and Shravan Vasishth.
+\newblock Similarity-based interference in sentence comprehension: {Literature
+  review and Bayesian meta-analysis}.
+\newblock {\em Journal of Memory and Language}, 94:316--339, 2017.
+
+\bibitem{kerns}
+G.~Jay Kerns.
+\newblock {\em Introduction to Probability and Statistics Using R}.
+\newblock 2010.
+
+\bibitem{lewisvasishth:cogsci05}
+Richard~L. Lewis and Shravan Vasishth.
+\newblock An activation-based model of sentence processing as skilled memory
+  retrieval.
+\newblock {\em Cognitive Science}, 29:1--45, 2005.
+
+\bibitem{mooreetal}
+D.~S. Moore, G.~P. McCabe, and Craig~B. S.
+\newblock {\em {Introduction to the Practice of Statistics}}.
+\newblock W. H. Freeman, 2009.
+
+\bibitem{pocock2013clinical}
+Stuart~J Pocock.
+\newblock {\em Clinical trials: {A} practical approach}.
+\newblock John Wiley \& Sons, 2013.
+
+\bibitem{rice1995mathematical}
+J.A. Rice.
+\newblock {\em {Mathematical statistics and data analysis}}.
+\newblock Duxbury press Belmont, CA, 1995.
+
+\bibitem{VasishthMertzenJaegerGelman2018}
+Shravan Vasishth, Daniela Mertzen, Lena~A. J\"ager, and Andrew Gelman.
+\newblock The statistical significance filter leads to overoptimistic
+  expectations of replicability.
+\newblock {\em Journal of Memory and Language}, 103:151--175, 2018.
+
+\bibitem{VasishthMixture2017}
+Shravan Vasishth, Bruno Nicenboim, Nicolas Chopin, and Robin Ryder.
+\newblock Bayesian hierarchical finite mixture models of reading times: A case
+  study.
+\newblock Unpublished MS, 2017.
+
+\end{thebibliography}
